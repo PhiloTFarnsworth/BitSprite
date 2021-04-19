@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"flag"
 	"fmt"
 	"image"
@@ -14,9 +15,11 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+
+	"github.com/muesli/gamut"
+	"github.com/muesli/gamut/palette"
 )
 
-//"github.com/muesli/gamut"
 //Very generic check function to reduce boilerplate.
 func check(err error) {
 	if err != nil {
@@ -25,17 +28,17 @@ func check(err error) {
 	}
 }
 
-//A helper function to confirm that a folder does indeed, exist. Borrowed from
-//https://stackoverflow.com/questions/34458625/run-multiple-exec-commands-in-the-same-shell-golang
-func folderExists(path string) (bool, error) {
+//Creates folder if it does not already exist.
+func mayCreateFolder(path string) {
 	_, err := os.Stat(path)
 	if err == nil {
-		return true, nil
+		//folder exists
+	} else if errors.Is(err, os.ErrNotExist) {
+		os.Mkdir(path, 0755)
+	} else {
+		//Shadow realm
+		log.Fatal(err)
 	}
-	if os.IsNotExist(err) {
-		return false, nil
-	}
-	return true, err
 }
 
 //These values describe our template pixels.
@@ -43,33 +46,30 @@ const (
 	_ = iota
 	Transparent
 	Bit
-	Outline
-	Fill
 	Accent
+	Fill
+	Outline
 )
 
-//This feels somewhat wasteful, though at the moment we're only calling it on bool flags.  Borrowed from
-//https://stackoverflow.com/questions/35809252/check-if-flag-was-provided-in-go/35809400
-func isFlagPassed(name string) bool {
-	found := false
-	flag.Visit(func(f *flag.Flag) {
-		if f.Name == name {
-			found = true
-		}
-	})
-	return found
-}
+//Colors to match for baf and outline
+var Black = color.RGBA{0, 0, 0, 255}
+var Red = color.RGBA{255, 0, 0, 255}
+var Green = color.RGBA{0, 255, 0, 255}
+var Blue = color.RGBA{0, 0, 255, 255}
 
 //In my mind, I think it might be better if we initialize our flags in a single map.
-var cpuprofile = flag.String("cpuprofile", "", "write cpu profile to file")
-var templateString = flag.String("template", "", "choose template to render")
-var foldPref = flag.String("fold", "None", "sets fold preference for template (Even/Odd/None)")
-var outlinePref = flag.Bool("outline", true, "sets outline preference")
-var rgbPref = flag.String("rgb", "255:255:255", "renders all images with the RGB provided ('r:g:b', where r,g,b are values 0-255)")
-var gradientPref = flag.String("gradient", "", "renders all images based on gradient chosen") //TODO
-var compositePref = flag.Int("sheetWidth", 8, "sets width of output sprite sheet, must return a whole number for 256/compositeWidth")
+var cpuprofile = flag.String("cpuprofile", "", "Write cpu profile to file")
+var templateString = flag.String("template", "", "Choose template to render")
+var foldPref = flag.String("fold", "None", "Sets fold preference for template (Even/Odd/None)")
+var outlinePref = flag.Bool("outline", true, "Sets outline preference")
+var hexPref = flag.String("hex", "#FFFFFF", "Sets colors based on a specified hex value.  if both -color and -hex are used, -color will be used.  -Blend overrules both.")
+var colorPref = flag.String("color", "", "Sets color based on a specified color from Wikipedia's list of colors. if both -color and -hex are used, -color will be used. -Blend overrules both.")
 
-//var color = gamut.Hex("#333")
+//Analogous colors are "...in harmony with one another." according to a color chart I just googled, so I figure we promote world peace in this fashion.
+var fabPref = flag.String("fab", "Analogous", "Describes the color relationship between Fill, Accent and Bit pixels (Analogous, Triadic, SplitComplementary)")
+var blendPref = flag.String("blend", "x:x", "Shifts between two colors as the program iterates through copies of the template. use 'Color:Color' or 'Hex:Hex' (i.e. 'Red:Blue' or '#FF0000:#0000FF'), based on Wikipedia's list of colors.")
+var compositePref = flag.Int("sheetWidth", 8, "Sets width of output sprite sheet, must return a whole number for 256/compositeWidth")
+var legacyColors = flag.Bool("legacyColor", false, "Colors are based on a composite linear gradient of the YCbCr at .5 lumia if true")
 
 func main() {
 	//Profiling
@@ -97,46 +97,100 @@ func main() {
 	defer trace.Stop()
 
 	//Now the program can begin
-	fmt.Print("BitSprite: Making 256 versions of 1 thing since 2020")
-
+	fmt.Print("BitSprite: Making 256 versions of 1 thing since 2020\n")
 	//Grab the flag values
 	templateName := *templateString
 	folding := *foldPref
 	outlines := *outlinePref
-	rgbString := strings.Split(*rgbPref, ":")
+	legacy := *legacyColors
+	mainHex := *hexPref
+	mainColor := *colorPref
+	fab := *fabPref
+	blend := strings.Split(*blendPref, ":")
+	compositeWidth := *compositePref
 
-	//Parse the rgbstring
-	var rDefined, gDefined, bDefined uint8
-	tempR, err := strconv.Atoi(rgbString[0])
-	check(err)
-	tempG, err := strconv.Atoi(rgbString[1])
-	check(err)
-	tempB, err := strconv.Atoi(rgbString[2])
-	check(err)
+	//There's a few ways we can handle bad compositePrefs, but I figure just defaulting to 8 is better
+	// than quitting or throwing an error.
+	if 256%compositeWidth != 0 {
+		compositeWidth = 8
+		fmt.Print("Bad sheetWidth passed, defaulting to sheetWidth=8\n")
+	}
 
-	rDefined = uint8(tempR)
-	gDefined = uint8(tempG)
-	bDefined = uint8(tempB)
+	//here we need to make sense of user inputs on hex/color, FAB and blend.  First we take the bitColor, then we
+	//the FAB relatives (by default Analogous).  Though if we want to use the blend values... we need to parse that string first.
+	var bitColor color.Color
+	var fillColor color.Color
+	var accentColor color.Color
+	//Looks like being a hack is back on the menu boys!
+	var startColor color.Color
+	var endColor color.Color
+	var bitColorList []color.Color
+	var ok bool
+
+	//First blend check
+	if strings.HasPrefix(blend[0], "#") {
+		startColor = gamut.Hex(blend[0])
+		endColor = gamut.Hex(blend[1])
+	} else {
+		startColor, ok = palette.Wikipedia.Color(blend[0])
+		if !ok {
+			startColor = nil
+		}
+		endColor, ok = palette.Wikipedia.Color(blend[1])
+		if !ok {
+			endColor = nil
+		}
+	}
+
+	//If we're blending, we'll grab the main color's blends, otherwise, we'll check -color and -hex.  If nothing, we set
+	//everything to white.
+	if startColor != nil && endColor != nil {
+		bitColorList = gamut.Blends(startColor, endColor, 256)
+		bitColor = nil
+	} else {
+		if mainColor == "" {
+			bitColor = gamut.Hex(mainHex)
+		} else {
+			bitColor, ok = palette.Wikipedia.Color(mainColor)
+			if !ok {
+				bitColor, _ = palette.Wikipedia.Color("White")
+			}
+		}
+		//check our fab to populate our single chromatic combos
+		switch fab {
+		case "Analogous":
+			colorList := gamut.Analogous(bitColor)
+			//arbitrary choice here.
+			fillColor = colorList[0]
+			accentColor = colorList[1]
+		case "Triadic":
+			colorList := gamut.Triadic(bitColor)
+			fillColor = colorList[0]
+			accentColor = colorList[1]
+		case "SplitComplementary":
+			colorList := gamut.SplitComplementary(bitColor)
+			fillColor = colorList[0]
+			accentColor = colorList[1]
+		}
+	}
 
 	//Open the templateFile
 	templateFile, err := os.Open("Templates/" + templateName + ".png")
 	check(err)
 	defer templateFile.Close()
 
-	//Prepare the generation directories for the file here.
-	DirString := "GenerationDirectory/" + templateName
-	CurrentDir, err := filepath.Abs("")
+	//Prepare the generation directories for the file here
+	currentDir, err := filepath.Abs("")
 	check(err)
-	PlacementDirectory := filepath.Join(CurrentDir, DirString)
-	_, err = folderExists(PlacementDirectory)
-	if err == nil {
-		os.Mkdir(DirString, 0755)
-	}
-	IndividualSpriteDir := DirString + "/Individuals"
-	_, err = folderExists(IndividualSpriteDir)
-	if err == nil {
-		os.Mkdir(IndividualSpriteDir, 0755)
-	}
+	genDirString := "/GenerationDirectory"
+	generationDirectory := filepath.Join(currentDir, genDirString)
+	mayCreateFolder(generationDirectory)
+	DirString := "GenerationDirectory/" + templateName
+	PlacementDirectory := filepath.Join(currentDir, DirString)
+	mayCreateFolder(PlacementDirectory)
+	IndividualSpriteString := DirString + "/Individuals"
+	individualSpriteDir := filepath.Join(currentDir, IndividualSpriteString)
+	mayCreateFolder(individualSpriteDir)
 
 	//Grab our template pixels and the template config
 	templateStream, err := png.Decode(templateFile)
@@ -169,27 +223,24 @@ func main() {
 	for y := 0; y < templateConfig.Height; y++ {
 		for x := 0; x < templateConfig.Width; x++ {
 			aPixel := templateStream.At(x, y)
-			m, n, o, _ := aPixel.RGBA()
-			r := uint8(m)
-			g := uint8(n)
-			b := uint8(o)
-			//Since we're reading them as rows, we simply append to pixelList as we go along.
-			if r == 255 && g == 0 && b == 0 {
+			//We compare the template's pixels to our defined colors, then append them to pixelList
+			switch aPixel {
+			case Red:
 				pixelList = append(pixelList, Outline)
-			} else if r == 0 && g == 0 && b == 0 {
-				pixelList = append(pixelList, Bit)
-			} else if r == 0 && g == 0 && b == 255 {
-				pixelList = append(pixelList, Fill)
-			} else if r == 0 && g == 255 && b == 0 {
+			case Green:
 				pixelList = append(pixelList, Accent)
-			} else {
+			case Blue:
+				pixelList = append(pixelList, Fill)
+			case Black:
+				pixelList = append(pixelList, Bit)
+			default:
 				pixelList = append(pixelList, Transparent)
 			}
 		}
 	}
 	//While we used Graphics Magic initially for creating a sprite sheet, we can probably incorporate this into the initial
 	//encoding, getting rid of the external dependency.  Composite width is the number of images on each row.
-	compositeWidth := *compositePref
+
 	composite := image.NewRGBA(image.Rectangle{image.Point{0, 0}, image.Point{canvasWidth * compositeWidth, canvasHeight * 256 / compositeWidth}})
 
 	//While we could benefit from making fewer work groups of routines, I don't find the performance penalty
@@ -224,7 +275,7 @@ func main() {
 			bitsRead := 0
 			for j := 0; j < len(pixelList); j++ {
 				if pixelList[j] == Bit {
-					if bitArray[bitsRead%8] == false {
+					if !bitArray[bitsRead%8] {
 						newImage = append(newImage, Outline)
 					} else {
 						newImage = append(newImage, Bit)
@@ -239,9 +290,9 @@ func main() {
 			//just want to check if it is a colored pixel, and if so, then we check if there are any transparent
 			//pixels adjacent.  This should also be an optional process, in case the user does not want to have an
 			//outline
-			if outlines == true {
+			if outlines {
 				for j := 0; j < len(newImage); j++ {
-					if newImage[j] == Bit || newImage[j] == Fill {
+					if newImage[j] == Bit || newImage[j] == Fill || newImage[j] == Accent {
 						//Here we want to check for bit pixels across the cardinal directions. I opted for
 						//simplifying the loop to check these combinations, so we translate our index into a coordinate.
 						pixelCoord := image.Point{(j % templateConfig.Width), int(j / templateConfig.Width)}
@@ -278,7 +329,7 @@ func main() {
 			}
 
 			// With the template adjusted, we create the output file for each image.
-			newFile := IndividualSpriteDir + "/" + strconv.Itoa(i) + ".png"
+			newFile := individualSpriteDir + "/" + strconv.Itoa(i) + ".png"
 
 			outfile, err := os.Create(newFile)
 			check(err)
@@ -287,71 +338,130 @@ func main() {
 
 			//Instead of writing our picture out as a list, we are using the x and y loops to more
 			//easily fold our images.
-			for y := 0; y < canvasHeight; y++ {
-				for x := 0; x < canvasWidth; x++ {
-					//We want to start by converting our coordinate into an index position.  When we fold,
-					//we put our index at the mirrored position.
-					var pixelIndex int
-					if x < foldAt {
-						pixelIndex = x + (y * templateConfig.Width)
-					} else {
-						pixelIndex = (canvasWidth - x) + (y * templateConfig.Width) - 1
-					}
-					// We then check what our newImage list says about this index.  Outline are black pixels,
-					// while Bit and Fill have their own formulas.  Since a canvas begins Transparent,
-					// we can skip those pixel indices
-					if newImage[pixelIndex] != Transparent {
-						var r, g, b uint8
-						if newImage[pixelIndex] == Outline {
-							r = 0
-							g = 0
-							b = 0
-						} else if newImage[pixelIndex] == Bit {
-							//TODO:  Add choices for how to color.
-							//two Linear gradients over YCbCr at .5 lumia (Rainbow)
-							//r, g, b = color.YCbCrToRGB(uint8(128), uint8((i+128)%256), uint8(i%256))
-							//the opposing gradients
-							//r, g, b = color.YCbCrToRGB(uint8(128), uint8(255-i), uint8((i+128)%256))
-							if rDefined+gDefined+bDefined == 0 {
+			var pixelIndex int
+			if legacy {
+				//Sigh, To be whoever wrote this again.  At some point we did vary images based on pixel position, then settled
+				//on this without considering that I didn't need to create and assign a color each pixel iteration.  Oops.
+				for y := 0; y < canvasHeight; y++ {
+					for x := 0; x < canvasWidth; x++ {
+						//We want to start by converting our coordinate into an index position.  When we fold,
+						//we put our index at the mirrored position.
+						if x < foldAt {
+							pixelIndex = x + (y * templateConfig.Width)
+						} else {
+							pixelIndex = (canvasWidth - x) + (y * templateConfig.Width) - 1
+						}
+						// We then check what our newImage list says about this index.  Outline are black pixels,
+						// while Bit and Fill have their own formulas.  Since a canvas begins Transparent,
+						// we can skip those pixel indices
+						if newImage[pixelIndex] != Transparent {
+							var r, g, b uint8
+							if newImage[pixelIndex] == Outline {
+								r = 0
+								g = 0
+								b = 0
+							} else if newImage[pixelIndex] == Bit {
+								//TODO:  Add choices for how to color.
+								//two Linear gradients over YCbCr at .5 lumia (Rainbow)
+								//r, g, b = color.YCbCrToRGB(uint8(128), uint8((i+128)%256), uint8(i%256))
+								//the opposing gradients over the color space
+								//r, g, b = color.YCbCrToRGB(uint8(128), uint8(255-i), uint8((i+128)%256))
+
 								//Let's try something really wacky.  All the colors!
 								if i < 128 {
 									r, g, b = color.YCbCrToRGB(uint8(128), uint8((i*2+128)%256), uint8((i*2)%256))
 								} else {
 									r, g, b = color.YCbCrToRGB(uint8(128), uint8(255-i*2), uint8((i*2+128)%256))
 								}
-							} else {
-								r, g, b = rDefined, gDefined, bDefined
+							} else if newImage[pixelIndex] == Fill {
+								//r, g, b = color.YCbCrToRGB(uint8(128), uint8((i+128)%256), uint8(i%256))
+								//r, g, b = color.YCbCrToRGB(uint8(128), uint8(255-i), uint8((i+128)%256))
+								if i < 128 {
+									r, g, b = color.YCbCrToRGB(uint8(128), uint8((i*2+128)%256), uint8((i*2)%256))
+								} else {
+									r, g, b = color.YCbCrToRGB(uint8(128), uint8(255-i*2), uint8((i*2+128)%256))
+								}
+							} else if newImage[pixelIndex] == Accent {
+								//r, g, b = color.YCbCrToRGB(uint8(96), uint8((i+128)%256), uint8(i%256))
+								//r, g, b = color.YCbCrToRGB(uint8(128), uint8(255-i), uint8((i+128)%256))
+								if i < 128 {
+									r, g, b = color.YCbCrToRGB(uint8(32), uint8((i*2+128)%256), uint8((i*2)%256))
+								} else {
+									r, g, b = color.YCbCrToRGB(uint8(32), uint8(255-i*2), uint8((i*2+128)%256))
+								}
 							}
-						} else if newImage[pixelIndex] == Fill {
-							//r, g, b = color.YCbCrToRGB(uint8(128), uint8((i+128)%256), uint8(i%256))
-							//r, g, b = color.YCbCrToRGB(uint8(128), uint8(255-i), uint8((i+128)%256))
-							if i < 128 {
-								r, g, b = color.YCbCrToRGB(uint8(128), uint8((i*2+128)%256), uint8((i*2)%256))
-							} else {
-								r, g, b = color.YCbCrToRGB(uint8(128), uint8(255-i*2), uint8((i*2+128)%256))
-							}
-						} else if newImage[pixelIndex] == Accent {
-							//r, g, b = color.YCbCrToRGB(uint8(96), uint8((i+128)%256), uint8(i%256))
-							//r, g, b = color.YCbCrToRGB(uint8(128), uint8(255-i), uint8((i+128)%256))
-							if i < 128 {
-								r, g, b = color.YCbCrToRGB(uint8(32), uint8((i*2+128)%256), uint8((i*2)%256))
-							} else {
-								r, g, b = color.YCbCrToRGB(uint8(32), uint8(255-i*2), uint8((i*2+128)%256))
+							//assign RGB to the pixels
+							newColor := [4]uint8{r, g, b, 255}
+							yOffset := y * canvasWidth * 4
+							iOffset := ((i / compositeWidth) * canvasHeight * canvasWidth * compositeWidth) + ((i % compositeWidth) * canvasWidth)
+							for z := 0; z < 4; z++ {
+								//Find our spot for the x axis, multiply by the bytes contained in the pixel, offset by the value of the row we're
+								//on and the pixel we want to write to.
+								canvas.Pix[(x*4+z)+yOffset] = newColor[z]
+								//This horrific line of code creates the composite sprite sheet.  Essentially the same as above, but also offseting by the
+								//y- and x-offsets of the sprite sheet using our increment.
+								composite.Pix[((iOffset+x)*4)+
+									z+(yOffset*compositeWidth)] = newColor[z]
 							}
 						}
-						//assign RGB to the pixels
-						newColor := [4]uint8{r, g, b, 255}
-						yOffset := y * canvasWidth * 4
-						iOffset := ((i / compositeWidth) * canvasHeight * canvasWidth * compositeWidth) + ((i % compositeWidth) * canvasWidth)
-						for z := 0; z < 4; z++ {
-							//Find our spot for the x axis, multiply by the bytes contained in the pixel, offset by the value of the row we're
-							//on and the pixel we want to write to.
-							canvas.Pix[(x*4+z)+yOffset] = newColor[z]
-							//This horrific line of code creates the composite sprite sheet.  Essentially the same as above, but also offseting by the
-							//y- and x-offsets of the sprite sheet using our increment.
-							composite.Pix[((iOffset+x)*4)+
-								z+(yOffset*compositeWidth)] = newColor[z]
+					}
+				}
+			} else {
+				//for the time being we aren't doing any effects across a single image, so we can just declare the color and insert it.  There's some
+				//reason for it, but the fact that we get colors out of color.Color.RGBA() as 32 bit uints is a little annoying.
+				var fColor color.Color
+				var aColor color.Color
+				var bColor color.Color
+				if bitColor != nil {
+					fColor = fillColor
+					aColor = accentColor
+					bColor = bitColor
+				} else {
+					bColor = bitColorList[i]
+					switch fab {
+					case "Analogous":
+						colorList := gamut.Analogous(bColor)
+						fColor = colorList[0]
+						aColor = colorList[1]
+					case "SplitComplementary":
+						colorList := gamut.SplitComplementary(bColor)
+						fColor = colorList[0]
+						aColor = colorList[1]
+					case "Triadic":
+						colorList := gamut.Triadic(bColor)
+						fColor = colorList[0]
+						aColor = colorList[1]
+					}
+
+				}
+
+				for y := 0; y < canvasHeight; y++ {
+					for x := 0; x < canvasWidth; x++ {
+						//We want to start by converting our coordinate into an index position.  When we fold,
+						//we put our index at the mirrored position.
+						if x < foldAt {
+							pixelIndex = x + (y * templateConfig.Width)
+						} else {
+							pixelIndex = (canvasWidth - x) + (y * templateConfig.Width) - 1
 						}
+						//looks great compared to the legacy interpretation!
+						switch newImage[pixelIndex] {
+						case Outline:
+							canvas.Set(x, y, Black)
+							composite.Set(x+canvasWidth*(i%8), y+canvasHeight*(i/8), Black)
+						case Bit:
+							canvas.Set(x, y, bColor)
+							composite.Set(x+canvasWidth*(i%8), y+canvasHeight*(i/8), bColor)
+						case Accent:
+							canvas.Set(x, y, aColor)
+							composite.Set(x+canvasWidth*(i%8), y+canvasHeight*(i/8), aColor)
+						case Fill:
+							canvas.Set(x, y, fColor)
+							composite.Set(x+canvasWidth*(i%8), y+canvasHeight*(i/8), fColor)
+						case Transparent:
+							//Nothing!
+						}
+
 					}
 				}
 			}
