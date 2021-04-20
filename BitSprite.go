@@ -20,6 +20,7 @@ import (
 	"github.com/muesli/gamut/palette"
 )
 
+//placeholder
 //Very generic check function to reduce boilerplate.
 func check(err error) {
 	if err != nil {
