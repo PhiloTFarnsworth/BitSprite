@@ -20,5 +20,5 @@ jobs:
         
     - name: Build
       run: |
-        go build -v ./...
+        go build -v BitSprite.go
         BitSprite.Exe -template=Triangle -fold=Odd -legacy=True
