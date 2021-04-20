@@ -24,3 +24,4 @@ jobs:
 
     - name: Test
       run: BitSprite.Exe -template=Triangle -fold=Odd -legacy=True 
+      shell: cmd
