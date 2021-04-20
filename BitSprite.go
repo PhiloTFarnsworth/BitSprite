@@ -250,9 +250,7 @@ func main() {
 			}
 		}
 	}
-	//While we used Graphics Magic initially for creating a sprite sheet, we can probably incorporate this into the initial
-	//encoding, getting rid of the external dependency.  Composite width is the number of images on each row.
-
+	//composite is our sprite sheet, we'll draw it up simultaneously with our individual images.
 	composite := image.NewRGBA(image.Rectangle{image.Point{0, 0}, image.Point{canvasWidth * compositeWidth, canvasHeight * 256 / compositeWidth}})
 
 	//While we could benefit from making fewer work groups of routines, I don't find the performance penalty
