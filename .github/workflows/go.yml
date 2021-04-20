@@ -19,9 +19,7 @@ jobs:
         go-version: 1.16
         
     - name: Build
-      run: go build -v -o executable BitSprite.go
-      shell: pwsh
+      run: go build -v ./...
 
-    - name: Test
-      run: BitSprite.Exe -template=Triangle -fold=Odd -legacy=True 
-      shell: pwsh
+    - name: Run
+      run: BitSprite.Exe -template=Triangle -fold=Odd -legacy=True
