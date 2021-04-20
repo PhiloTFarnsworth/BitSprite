@@ -19,6 +19,8 @@ jobs:
         go-version: 1.16
         
     - name: Build
-      run: |
-        go build -v BitSprite.go
-        BitSprite.Exe -template=Triangle -fold=Odd -legacy=True
+      run: go build -v BitSprite.go
+      
+
+    - name: Test
+      run: BitSprite.Exe -template=Triangle -fold=Odd -legacy=True 
