@@ -19,7 +19,7 @@ jobs:
         go-version: 1.16
         
     - name: Build
-      run: go build -v BitSprite.go
+      run: go build -v -o executable BitSprite.go
       shell: pwsh
 
     - name: Test
