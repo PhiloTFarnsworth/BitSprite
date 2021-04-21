@@ -66,10 +66,9 @@ var outlinePref = flag.Bool("outline", true, "Sets outline preference")
 var hexPref = flag.String("hex", "#FFFFFF", "Sets colors based on a specified hex value.  if both -color and -hex are used, -color will be used.  -Blend overrules both.")
 var colorPref = flag.String("color", "", "Sets color based on a specified color from Wikipedia's list of colors. if both -color and -hex are used, -color will be used. -Blend overrules both.")
 var backgroundPref = flag.String("background", "", "Sets color of background. use a Hex value or a color name from wikipedia's list of colors.")
-
-//Analogous colors are "...in harmony with one another." according to a color chart I just googled, so I figure we promote world peace in this fashion.
 var fabPref = flag.String("fab", "Analogous", "Describes the color relationship between Fill, Accent and Bit pixels (Analogous, Triadic, SplitComplementary)")
 var blendPref = flag.String("blend", "x:x", "Shifts between two colors as the program iterates through copies of the template. use 'Color:Color' or 'Hex:Hex' (i.e. 'Red:Blue' or '#FF0000:#0000FF'), based on Wikipedia's list of colors.")
+var upscalePref = flag.Int("upscale", 1, "Increases the scale of the template's copies, odd numbers plz")
 var compositePref = flag.Int("sheetWidth", 8, "Sets width of output sprite sheet, must return a whole number for 256/compositeWidth")
 var legacyColors = flag.Bool("legacy", false, "Colors are based on a composite linear gradient of the YCbCr at .5 lumia if true")
 
@@ -110,6 +109,7 @@ func main() {
 	background := *backgroundPref
 	fab := *fabPref
 	blend := strings.Split(*blendPref, ":")
+	upScale := *upscalePref
 	compositeWidth := *compositePref
 
 	//There's a few ways we can handle bad compositePrefs, but I figure just defaulting to 8 is better
@@ -186,6 +186,10 @@ func main() {
 			bgColor = Transp
 		}
 	}
+	//sanitize upScale
+	if upScale < 1 {
+		upScale = 1
+	}
 
 	//Open the templateFile
 	templateFile, err := os.Open("Templates/" + templateName + ".png")
@@ -218,11 +222,11 @@ func main() {
 	var foldAt int
 	switch folding {
 	case "Even":
-		canvasWidth = templateConfig.Width * 2
-		foldAt = canvasWidth / 2
+		canvasWidth = (templateConfig.Width * 2)
+		foldAt = (canvasWidth / 2)
 	case "Odd":
-		canvasWidth = (templateConfig.Width * 2) - 1
-		foldAt = (canvasWidth / 2) + 1
+		canvasWidth = ((templateConfig.Width * 2) - 1)
+		foldAt = ((canvasWidth / 2) + 1)
 	case "None":
 		canvasWidth = templateConfig.Width
 		foldAt = canvasWidth
@@ -251,8 +255,9 @@ func main() {
 			}
 		}
 	}
+
 	//composite is our sprite sheet, we'll draw it up simultaneously with our individual images.
-	composite := image.NewRGBA(image.Rectangle{image.Point{0, 0}, image.Point{canvasWidth * compositeWidth, canvasHeight * 256 / compositeWidth}})
+	composite := image.NewRGBA(image.Rectangle{image.Point{0, 0}, image.Point{canvasWidth * upScale * compositeWidth, canvasHeight * upScale * 256 / compositeWidth}})
 
 	//While we could benefit from making fewer work groups of routines, I don't find the performance penalty
 	//on smaller files as too painful when compared to the gains this makes on larger files.  This was 2x faster
@@ -345,7 +350,7 @@ func main() {
 			outfile, err := os.Create(newFile)
 			check(err)
 
-			canvas := image.NewRGBA(image.Rectangle{image.Point{0, 0}, image.Point{canvasWidth, canvasHeight}})
+			canvas := image.NewRGBA(image.Rectangle{image.Point{0, 0}, image.Point{canvasWidth * upScale, canvasHeight * upScale}})
 
 			//Instead of writing our picture out as a list, we are using the x and y loops to more
 			//easily fold our images.
@@ -377,20 +382,10 @@ func main() {
 					}
 				}
 			} else {
-				//legacy ycbcr gradient
+				//legacy ycbcr gradients
 				bColor = color.YCbCr{128, uint8((i + 128) % 256), uint8(i % 256)}
 				fColor = color.YCbCr{156, uint8((i + 128) % 256), uint8(i % 256)}
 				aColor = color.YCbCr{32, uint8((i + 128) % 256), uint8(i % 256)}
-				//Going to keep this as a note, While I prefer the above function, you could also
-				//argue this covers more of the color plane.  On the otherhand, the extra color space
-				//is almost entirely green and magenta, so it's not terribly interesting to double our
-				//gradients.
-				// 	if i < 128 {
-				// 		bcolor = color.YCbCr{uint8(128), uint8((i*2+128)%256), uint8((i*2)%256)}
-				// 	} else {
-				// 		bcolor = color.YCbCrToRGB(uint8(128), uint8(255-i*2), uint8((i*2+128)%256))
-				// 	}
-
 			}
 			for y := 0; y < canvasHeight; y++ {
 				for x := 0; x < canvasWidth; x++ {
@@ -401,27 +396,31 @@ func main() {
 					} else {
 						pixelIndex = (canvasWidth - x) + (y * templateConfig.Width) - 1
 					}
-					//looks great compared to the legacy interpretation!
-					switch newImage[pixelIndex] {
-					case Outline:
-						canvas.Set(x, y, Black)
-						composite.Set(x+canvasWidth*(i%8), y+canvasHeight*(i/8), Black)
-					case Bit:
-						canvas.Set(x, y, bColor)
-						composite.Set(x+canvasWidth*(i%8), y+canvasHeight*(i/8), bColor)
-					case Accent:
-						canvas.Set(x, y, aColor)
-						composite.Set(x+canvasWidth*(i%8), y+canvasHeight*(i/8), aColor)
-					case Fill:
-						canvas.Set(x, y, fColor)
-						composite.Set(x+canvasWidth*(i%8), y+canvasHeight*(i/8), fColor)
-					case Transparent:
-						if background != "" {
-							canvas.Set(x, y, bgColor)
-							composite.Set(x+canvasWidth*(i%8), y+canvasHeight*(i/8), bgColor)
+					//Messy.  Essentially we read the pixel index on our newImage, then we set the pixels on the actual image while
+					//accomodating for scale.
+					for j := 0; j < upScale; j++ {
+						for k := 0; k < upScale; k++ {
+							switch newImage[pixelIndex] {
+							case Outline:
+								canvas.Set((x*upScale)+j, (y*upScale)+k, Black)
+								composite.Set((x*upScale)+j+canvasWidth*upScale*(i%8), (y*upScale)+k+canvasHeight*upScale*(i/8), Black)
+							case Bit:
+								canvas.Set((x*upScale)+j, (y*upScale)+k, bColor)
+								composite.Set((x*upScale)+j+canvasWidth*upScale*(i%8), (y*upScale)+k+canvasHeight*upScale*(i/8), bColor)
+							case Accent:
+								canvas.Set((x*upScale)+j, (y*upScale)+k, aColor)
+								composite.Set((x*upScale)+j+canvasWidth*upScale*(i%8), (y*upScale)+k+canvasHeight*upScale*(i/8), aColor)
+							case Fill:
+								canvas.Set((x*upScale)+j, (y*upScale)+k, fColor)
+								composite.Set((x*upScale)+j+canvasWidth*upScale*(i%8), (y*upScale)+k+canvasHeight*upScale*(i/8), fColor)
+							case Transparent:
+								if background != "" {
+									canvas.Set((x*upScale)+j, (y*upScale)+k, bgColor)
+									composite.Set((x*upScale)+j+canvasWidth*upScale*(i%8), (y*upScale)+k+canvasHeight*upScale*(i/8), bgColor)
+								}
+							}
 						}
 					}
-
 				}
 			}
 			//After building the sprite, we encode, then close the individual sprite file.
