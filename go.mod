@@ -1,4 +1,4 @@
-module github.com/PhiloTFarnsworth/BitSprite.git
+module github.com/philotfarnsworth/bitsprite
 
 go 1.16
 

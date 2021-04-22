@@ -61,14 +61,14 @@ var Transp = color.RGBA{0, 0, 0, 0}
 //In my mind, I think it might be better if we initialize our flags in a single map.
 var cpuprofile = flag.String("cpuprofile", "", "Write cpu profile to file")
 var templateString = flag.String("template", "", "Choose template to render")
-var foldPref = flag.String("fold", "None", "Sets fold preference for template (Even/Odd/None)")
+var foldPref = flag.String("fold", "", "Sets fold preference for template if desired. (e=Even, o=odd)")
 var outlinePref = flag.Bool("outline", true, "Sets outline preference")
 var hexPref = flag.String("hex", "#FFFFFF", "Sets colors based on a specified hex value.  if both -color and -hex are used, -color will be used.  -Blend overrules both.")
-var colorPref = flag.String("color", "", "Sets color based on a specified color from Wikipedia's list of colors. if both -color and -hex are used, -color will be used. -Blend overrules both.")
+var colorPref = flag.String("color", "", "Sets color based on a specified color from Wikipedia's list of colors, written as Lemon_Green for multiple word names. if both -color and -hex are used, -color will be used. -Blend overrules both.")
 var backgroundPref = flag.String("background", "", "Sets color of background. use a Hex value or a color name from wikipedia's list of colors.")
-var fabPref = flag.String("fab", "Analogous", "Describes the color relationship between Fill, Accent and Bit pixels (Analogous, Triadic, SplitComplementary)")
+var fabPref = flag.String("fab", "Analogous", "Describes the color relationship between Fill, Accent and Bit pixels (a=Analogous, t=Triadic, s=SplitComplementary)")
 var blendPref = flag.String("blend", "x:x", "Shifts between two colors as the program iterates through copies of the template. use 'Color:Color' or 'Hex:Hex' (i.e. 'Red:Blue' or '#FF0000:#0000FF'), based on Wikipedia's list of colors.")
-var upscalePref = flag.Int("upscale", 1, "Increases the scale of the template's copies, odd numbers plz")
+var upscalePref = flag.Int("upscale", 1, "Increases the scale of the template's copies")
 var compositePref = flag.Int("sheetWidth", 8, "Sets width of output sprite sheet, must return a whole number for 256/compositeWidth")
 var legacyColors = flag.Bool("legacy", false, "Colors are based on a composite linear gradient of the YCbCr at .5 lumia if true")
 
@@ -136,11 +136,11 @@ func main() {
 		startColor = gamut.Hex(blend[0])
 		endColor = gamut.Hex(blend[1])
 	} else {
-		startColor, ok = palette.Wikipedia.Color(blend[0])
+		startColor, ok = palette.Wikipedia.Color(strings.Title(strings.ToLower(strings.ReplaceAll(blend[0], "_", " "))))
 		if !ok {
 			startColor = nil
 		}
-		endColor, ok = palette.Wikipedia.Color(blend[1])
+		endColor, ok = palette.Wikipedia.Color(strings.Title(strings.ToLower(strings.ReplaceAll(blend[1], "_", " "))))
 		if !ok {
 			endColor = nil
 		}
@@ -155,24 +155,22 @@ func main() {
 		if mainColor == "" {
 			bitColor = gamut.Hex(mainHex)
 		} else {
-			bitColor, ok = palette.Wikipedia.Color(mainColor)
+			bitColor, ok = palette.Wikipedia.Color(strings.Title(strings.ToLower(strings.ReplaceAll(mainColor, "_", " "))))
 			if !ok {
 				bitColor, _ = palette.Wikipedia.Color("White")
 			}
 		}
 		//check our fab to populate our single chromatic combos
-		switch fab {
-		case "Analogous":
-			colorList := gamut.Analogous(bitColor)
-			//arbitrary choice here.
+		if strings.EqualFold(fab, "splitcomplementary") || strings.EqualFold(fab, "s") {
+			colorList := gamut.SplitComplementary(bitColor)
 			fillColor = colorList[0]
 			accentColor = colorList[1]
-		case "Triadic":
+		} else if strings.EqualFold(fab, "triadic") || strings.EqualFold(fab, "t") {
 			colorList := gamut.Triadic(bitColor)
 			fillColor = colorList[0]
 			accentColor = colorList[1]
-		case "SplitComplementary":
-			colorList := gamut.SplitComplementary(bitColor)
+		} else {
+			colorList := gamut.Analogous(bitColor)
 			fillColor = colorList[0]
 			accentColor = colorList[1]
 		}
@@ -220,14 +218,13 @@ func main() {
 	//Grab our values to build an individual new image.
 	var canvasWidth int
 	var foldAt int
-	switch folding {
-	case "Even":
+	if strings.EqualFold(folding, "even") || strings.EqualFold(folding, "e") {
 		canvasWidth = (templateConfig.Width * 2)
 		foldAt = (canvasWidth / 2)
-	case "Odd":
+	} else if strings.EqualFold(folding, "odd") || strings.EqualFold(folding, "o") {
 		canvasWidth = ((templateConfig.Width * 2) - 1)
 		foldAt = ((canvasWidth / 2) + 1)
-	case "None":
+	} else {
 		canvasWidth = templateConfig.Width
 		foldAt = canvasWidth
 	}
@@ -366,17 +363,16 @@ func main() {
 					bColor = bitColor
 				} else {
 					bColor = bitColorList[i]
-					switch fab {
-					case "Analogous":
-						colorList := gamut.Analogous(bColor)
-						fColor = colorList[0]
-						aColor = colorList[1]
-					case "SplitComplementary":
+					if strings.EqualFold(fab, "splitcomplementary") || strings.EqualFold(fab, "s") {
 						colorList := gamut.SplitComplementary(bColor)
 						fColor = colorList[0]
 						aColor = colorList[1]
-					case "Triadic":
+					} else if strings.EqualFold(fab, "triadic") || strings.EqualFold(fab, "t") {
 						colorList := gamut.Triadic(bColor)
+						fColor = colorList[0]
+						aColor = colorList[1]
+					} else {
+						colorList := gamut.Analogous(bColor)
 						fColor = colorList[0]
 						aColor = colorList[1]
 					}
