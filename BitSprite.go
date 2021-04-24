@@ -17,60 +17,44 @@ import (
 	"sync"
 
 	"github.com/muesli/gamut"
-	"github.com/muesli/gamut/palette"
 )
 
-//placeholder
-//Very generic check function to reduce boilerplate.
-func check(err error) {
-	if err != nil {
-		log.Fatal(err)
-	}
-}
-
-//Creates folder if it does not already exist.
-func mayCreateFolder(path string) {
-	_, err := os.Stat(path)
-	if err == nil {
-		//folder exists
-	} else if errors.Is(err, os.ErrNotExist) {
-		os.Mkdir(path, 0755)
-	} else {
-		//Shadow realm
-		log.Fatal(err)
-	}
-}
+type Pixel int
 
 //These values describe our template pixels.
 const (
-	_ = iota
-	Transparent
+	Background Pixel = iota
 	Bit
 	Accent
 	Fill
 	Outline
 )
 
-//Colors to match for baf and outline
+//Colors to match for fab and outline
 var Black = color.RGBA{0, 0, 0, 255}
 var Red = color.RGBA{255, 0, 0, 255}
 var Green = color.RGBA{0, 255, 0, 255}
 var Blue = color.RGBA{0, 0, 255, 255}
 var Transp = color.RGBA{0, 0, 0, 0}
+var LGray = color.RGBA{85, 85, 85, 255}
+var HGray = color.RGBA{170, 170, 170, 255}
+var White = color.RGBA{255, 255, 255, 255}
 
-//In my mind, I think it might be better if we initialize our flags in a single map.
-var cpuprofile = flag.String("cpuprofile", "", "Write cpu profile to file")
+//The big idea here is that we want some granular control for the user, but without too much extra.  Ideally, the user
+//could do bitsprite.exe -template=somefile and have something interesting pop out, while another user could load up on
+//flags and have their specific needs met.
 var templateString = flag.String("template", "", "Choose template to render")
 var foldPref = flag.String("fold", "", "Sets fold preference for template if desired. (e=Even, o=odd)")
+var colorPref = flag.String("color", "", "Sets color of activated bit pixels.")
+var accentPref = flag.String("accent", "", "Sets the color of the accent pixels.")
+var fillPref = flag.String("fill", "", "Sets the color of the fill pixels.")
+var backgroundPref = flag.String("background", "", "Sets color of background.")
+var outlineColorPref = flag.String("outcolor", "#000000", "Sets the color of the outline pixels.")
 var outlinePref = flag.Bool("outline", true, "Sets outline preference")
-var hexPref = flag.String("hex", "#FFFFFF", "Sets colors based on a specified hex value.  if both -color and -hex are used, -color will be used.  -Blend overrules both.")
-var colorPref = flag.String("color", "", "Sets color based on a specified color from Wikipedia's list of colors, written as Lemon_Green for multiple word names. if both -color and -hex are used, -color will be used. -Blend overrules both.")
-var backgroundPref = flag.String("background", "", "Sets color of background. use a Hex value or a color name from wikipedia's list of colors.")
-var fabPref = flag.String("fab", "Analogous", "Describes the color relationship between Fill, Accent and Bit pixels (a=Analogous, t=Triadic, s=SplitComplementary)")
-var blendPref = flag.String("blend", "x:x", "Shifts between two colors as the program iterates through copies of the template. use 'Color:Color' or 'Hex:Hex' (i.e. 'Red:Blue' or '#FF0000:#0000FF'), based on Wikipedia's list of colors.")
 var upscalePref = flag.Int("upscale", 1, "Increases the scale of the template's copies")
 var compositePref = flag.Int("sheetWidth", 8, "Sets width of output sprite sheet, must return a whole number for 256/compositeWidth")
 var legacyColors = flag.Bool("legacy", false, "Colors are based on a composite linear gradient of the YCbCr at .5 lumia if true")
+var cpuprofile = flag.String("cpuprofile", "", "Write cpu profile to file")
 
 func main() {
 	//Profiling
@@ -104,86 +88,51 @@ func main() {
 	folding := *foldPref
 	outlines := *outlinePref
 	legacy := *legacyColors
-	mainHex := *hexPref
-	mainColor := *colorPref
-	background := *backgroundPref
-	fab := *fabPref
-	blend := strings.Split(*blendPref, ":")
 	upScale := *upscalePref
 	compositeWidth := *compositePref
+	//We're going to support blends for all of these variables, so first we'll pass our flags split as though it's blend
+	//code.
+	chosenColorStrings := make(map[Pixel][]string)
+	chosenColorStrings[Bit] = strings.Split(*colorPref, ":")
+	chosenColorStrings[Accent] = strings.Split(*accentPref, ":")
+	chosenColorStrings[Fill] = strings.Split(*fillPref, ":")
+	chosenColorStrings[Background] = strings.Split(*backgroundPref, ":")
+	chosenColorStrings[Outline] = strings.Split(*outlineColorPref, ":")
 
-	//There's a few ways we can handle bad compositePrefs, but I figure just defaulting to 8 is better
-	// than quitting or throwing an error.
+	//There's a few ways we can handle bad compositePrefs, but defaulting to 8 is one solution.
 	if 256%compositeWidth != 0 {
 		compositeWidth = 8
 		fmt.Print("Bad sheetWidth passed, defaulting to sheetWidth=8\n")
 	}
 
-	//here we need to make sense of user inputs on hex/color, FAB and blend.  First we take the bitColor, then we
-	//the FAB relatives (by default Analogous).  Though if we want to use the blend values... we need to parse that string first.
-	var bitColor color.Color
-	var fillColor color.Color
-	var accentColor color.Color
-	//Looks like being a hack is back on the menu boys!
-	var startColor color.Color
-	var endColor color.Color
-	var bgColor color.Color
-	var bitColorList []color.Color
-	var ok bool
-
-	//First blend check
-	if strings.HasPrefix(blend[0], "#") {
-		startColor = gamut.Hex(blend[0])
-		endColor = gamut.Hex(blend[1])
-	} else {
-		startColor, ok = palette.Wikipedia.Color(strings.Title(strings.ToLower(strings.ReplaceAll(blend[0], "_", " "))))
-		if !ok {
-			startColor = nil
-		}
-		endColor, ok = palette.Wikipedia.Color(strings.Title(strings.ToLower(strings.ReplaceAll(blend[1], "_", " "))))
-		if !ok {
-			endColor = nil
-		}
-	}
-
-	//If we're blending, we'll grab the main color's blends, otherwise, we'll check -color and -hex.  If nothing, we set
-	//everything to white.
-	if startColor != nil && endColor != nil {
-		bitColorList = gamut.Blends(startColor, endColor, 256)
-		bitColor = nil
-	} else {
-		if mainColor == "" {
-			bitColor = gamut.Hex(mainHex)
-		} else {
-			bitColor, ok = palette.Wikipedia.Color(strings.Title(strings.ToLower(strings.ReplaceAll(mainColor, "_", " "))))
-			if !ok {
-				bitColor, _ = palette.Wikipedia.Color("White")
+	chosenColors := make(map[Pixel][]color.Color)
+	//We check for length of our flag values, if we split into multiple strings, we expect to blend.
+	for key, val := range chosenColorStrings {
+		if len(val) == 1 {
+			//We'll use these default values if nothing is defined
+			if val[0] == "" {
+				switch key {
+				case Bit:
+					chosenColors[key] = append(chosenColors[key], White)
+				case Accent:
+					chosenColors[key] = append(chosenColors[key], LGray)
+				case Fill:
+					chosenColors[key] = append(chosenColors[key], HGray)
+				case Background:
+					chosenColors[key] = append(chosenColors[key], Transp)
+				case Outline:
+					chosenColors[key] = append(chosenColors[key], Black)
+				}
+			} else {
+				//Otherwise add one color to the chosen colors list
+				chosenColors[key] = append(chosenColors[key], gamut.Hex(val[0]))
 			}
-		}
-		//check our fab to populate our single chromatic combos
-		if strings.EqualFold(fab, "splitcomplementary") || strings.EqualFold(fab, "s") {
-			colorList := gamut.SplitComplementary(bitColor)
-			fillColor = colorList[0]
-			accentColor = colorList[1]
-		} else if strings.EqualFold(fab, "triadic") || strings.EqualFold(fab, "t") {
-			colorList := gamut.Triadic(bitColor)
-			fillColor = colorList[0]
-			accentColor = colorList[1]
 		} else {
-			colorList := gamut.Analogous(bitColor)
-			fillColor = colorList[0]
-			accentColor = colorList[1]
+			//Add the blend to the list of chosen colors.  Should consider doing multiple blends.
+			chosenColors[key] = gamut.Blends(gamut.Hex(val[0]), gamut.Hex(val[1]), 256)
 		}
 	}
-	//finally parse the -background flag.
-	if strings.HasPrefix(background, "#") {
-		bgColor = gamut.Hex(background)
-	} else {
-		bgColor, ok = palette.Wikipedia.Color(background)
-		if !ok {
-			bgColor = Transp
-		}
-	}
+
 	//sanitize upScale
 	if upScale < 1 {
 		upScale = 1
@@ -203,14 +152,12 @@ func main() {
 	DirString := "GenerationDirectory/" + templateName
 	PlacementDirectory := filepath.Join(currentDir, DirString)
 	mayCreateFolder(PlacementDirectory)
-	IndividualSpriteString := DirString + "/Individuals"
-	individualSpriteDir := filepath.Join(currentDir, IndividualSpriteString)
+	individualSpriteDir := filepath.Join(currentDir, DirString+"/Individuals")
 	mayCreateFolder(individualSpriteDir)
 
 	//Grab our template pixels and the template config
 	templateStream, err := png.Decode(templateFile)
 	check(err)
-	//Be kind, Rewind
 	templateFile.Seek(0, 0)
 	templateConfig, err := png.DecodeConfig(templateFile)
 	check(err)
@@ -230,10 +177,8 @@ func main() {
 	}
 	canvasHeight := templateConfig.Height
 
-	//With that information, we can read out the values of our templatefile.  After a few differnet ideas of how to optimize,
-	//I think the best practice is just to create a single list that captures our template, with enumerated values to delineate
-	//which pixels are outlines, bits, ect.
-	var pixelList []int
+	//create an array and assign our pixels to it.  We could use
+	var pixelList []Pixel
 	for y := 0; y < templateConfig.Height; y++ {
 		for x := 0; x < templateConfig.Width; x++ {
 			aPixel := templateStream.At(x, y)
@@ -248,7 +193,7 @@ func main() {
 			case Black:
 				pixelList = append(pixelList, Bit)
 			default:
-				pixelList = append(pixelList, Transparent)
+				pixelList = append(pixelList, Background)
 			}
 		}
 	}
@@ -266,29 +211,16 @@ func main() {
 		go func(i int) {
 
 			defer wg.Done()
-			//Create the bit array for each individual image.
-			bitArray := make([]bool, 8)
-			//Here, we are encoding our i value into binary, then using bitwise shifts to place it into
-			//an array.  We'll then use this array to decide whether we want our 'Bit' pixels to represented.
-			//Technically the array is backwards, but since we'll end up reading it left to right it's not a problem
-			for j := 0; j < 8; j++ {
-				k := uint(i) >> j
-				if k&1 == 1 {
-					bitArray[j] = true
-				}
-			}
-
 			//We'll create the modified template based on our pixel list, where we modify our outlines based
 			//on the status of nearby bits.
-			var newImage []int
-
-			//So we start by copying pixelList to newImage, applying the bitArray to our designated bit pixels.
-			//Since I want to keep open the option for larger images, we'll keep track of bitsRead, so that we
-			//just repeat through our bitArray if we include more than 8 'Bit' pixels.
+			var newImage []Pixel
 			bitsRead := 0
+			//I think the bitarray has been more for my benefit, I should be able to write this without the bitarray being set.
 			for j := 0; j < len(pixelList); j++ {
 				if pixelList[j] == Bit {
-					if !bitArray[bitsRead%8] {
+					//We take our increment, shift it by the bitsRead, finally checking whether it is even odd.  This way 0 = all inactive,
+					//255 = all active.
+					if (i>>(bitsRead%8))&1 == 0 {
 						newImage = append(newImage, Outline)
 					} else {
 						newImage = append(newImage, Bit)
@@ -300,7 +232,7 @@ func main() {
 			}
 
 			//I've gone through a few implementations, but have landed on this for drawing our outlines.  We
-			//just want to check if it is a colored pixel, and if so, then we check if there are any transparent
+			//just want to check if it is a colored pixel, and if so, then we check if there are any Background
 			//pixels adjacent.  This should also be an optional process, in case the user does not want to have an
 			//outline
 			if outlines {
@@ -312,30 +244,19 @@ func main() {
 						for k := -1; k < 2; k = k + 2 {
 							//another benefit of translation, easier to check for whether a pixel is
 							//actually adjacent or whether the next pixel is on the next different row
-							var xIndex int
-							var yIndex int
 							if templateConfig.Width > pixelCoord.X+k && pixelCoord.X+k >= 0 {
-								xIndex = pixelCoord.X + k + (pixelCoord.Y * templateConfig.Width)
-							} else {
-								//Outside our bounds/not adjacent?  Mark it as -1 and move on.
-								xIndex = -1
-							}
-							if templateConfig.Height > pixelCoord.Y+k && pixelCoord.Y+k >= 0 {
-								yIndex = pixelCoord.X + ((pixelCoord.Y + k) * templateConfig.Width)
-							} else {
-								yIndex = -1
-							}
-							//Is it in bounds?  Check for a transparent pixel and replace it with an Outline
-							if xIndex >= 0 {
-								if newImage[xIndex] == Transparent {
+								xIndex := pixelCoord.X + k + (pixelCoord.Y * templateConfig.Width)
+								if newImage[xIndex] == Background {
 									newImage[xIndex] = Outline
 								}
 							}
-							if yIndex >= 0 {
-								if newImage[yIndex] == Transparent {
+							if templateConfig.Height > pixelCoord.Y+k && pixelCoord.Y+k >= 0 {
+								yIndex := pixelCoord.X + ((pixelCoord.Y + k) * templateConfig.Width)
+								if newImage[yIndex] == Background {
 									newImage[yIndex] = Outline
 								}
 							}
+
 						}
 					}
 				}
@@ -353,35 +274,22 @@ func main() {
 			//easily fold our images.
 			var pixelIndex int
 			//let's grab the base color for our image
-			var fColor color.Color
-			var aColor color.Color
-			var bColor color.Color
+			finalColors := make(map[Pixel]color.Color)
 			if !legacy {
-				if bitColor != nil {
-					fColor = fillColor
-					aColor = accentColor
-					bColor = bitColor
-				} else {
-					bColor = bitColorList[i]
-					if strings.EqualFold(fab, "splitcomplementary") || strings.EqualFold(fab, "s") {
-						colorList := gamut.SplitComplementary(bColor)
-						fColor = colorList[0]
-						aColor = colorList[1]
-					} else if strings.EqualFold(fab, "triadic") || strings.EqualFold(fab, "t") {
-						colorList := gamut.Triadic(bColor)
-						fColor = colorList[0]
-						aColor = colorList[1]
+				for key, val := range chosenColors {
+					if len(val) > 1 {
+						finalColors[key] = chosenColors[key][i]
 					} else {
-						colorList := gamut.Analogous(bColor)
-						fColor = colorList[0]
-						aColor = colorList[1]
+						finalColors[key] = chosenColors[key][0]
 					}
 				}
 			} else {
 				//legacy ycbcr gradients
-				bColor = color.YCbCr{128, uint8((i + 128) % 256), uint8(i % 256)}
-				fColor = color.YCbCr{156, uint8((i + 128) % 256), uint8(i % 256)}
-				aColor = color.YCbCr{32, uint8((i + 128) % 256), uint8(i % 256)}
+				finalColors[Bit] = color.YCbCr{128, uint8((i + 128) % 256), uint8(i % 256)}
+				finalColors[Accent] = color.YCbCr{32, uint8((i + 128) % 256), uint8(i % 256)}
+				finalColors[Fill] = color.YCbCr{224, uint8((i + 128) % 256), uint8(i % 256)}
+				finalColors[Background] = Transp
+				finalColors[Outline] = Black
 			}
 			for y := 0; y < canvasHeight; y++ {
 				for x := 0; x < canvasWidth; x++ {
@@ -396,25 +304,8 @@ func main() {
 					//accomodating for scale.
 					for j := 0; j < upScale; j++ {
 						for k := 0; k < upScale; k++ {
-							switch newImage[pixelIndex] {
-							case Outline:
-								canvas.Set((x*upScale)+j, (y*upScale)+k, Black)
-								composite.Set((x*upScale)+j+canvasWidth*upScale*(i%8), (y*upScale)+k+canvasHeight*upScale*(i/8), Black)
-							case Bit:
-								canvas.Set((x*upScale)+j, (y*upScale)+k, bColor)
-								composite.Set((x*upScale)+j+canvasWidth*upScale*(i%8), (y*upScale)+k+canvasHeight*upScale*(i/8), bColor)
-							case Accent:
-								canvas.Set((x*upScale)+j, (y*upScale)+k, aColor)
-								composite.Set((x*upScale)+j+canvasWidth*upScale*(i%8), (y*upScale)+k+canvasHeight*upScale*(i/8), aColor)
-							case Fill:
-								canvas.Set((x*upScale)+j, (y*upScale)+k, fColor)
-								composite.Set((x*upScale)+j+canvasWidth*upScale*(i%8), (y*upScale)+k+canvasHeight*upScale*(i/8), fColor)
-							case Transparent:
-								if background != "" {
-									canvas.Set((x*upScale)+j, (y*upScale)+k, bgColor)
-									composite.Set((x*upScale)+j+canvasWidth*upScale*(i%8), (y*upScale)+k+canvasHeight*upScale*(i/8), bgColor)
-								}
-							}
+							canvas.Set((x*upScale)+j, (y*upScale)+k, finalColors[newImage[pixelIndex]])
+							composite.Set((x*upScale)+j+canvasWidth*upScale*(i%8), (y*upScale)+k+canvasHeight*upScale*(i/8), finalColors[newImage[pixelIndex]])
 						}
 					}
 				}
@@ -424,12 +315,31 @@ func main() {
 			outfile.Close()
 		}(i)
 	}
-
 	wg.Wait()
-
 	compositeName := PlacementDirectory + "/" + templateName + "SpriteSheet.png"
 	compositeFile, err := os.Create(compositeName)
 	check(err)
 	png.Encode(compositeFile, composite)
 	compositeFile.Close()
+}
+
+//Very generic check function to reduce boilerplate.  Since we are creating files, I figure we err on the side of caution and
+//just fatal log any errors that come.
+func check(err error) {
+	if err != nil {
+		log.Fatal(err)
+	}
+}
+
+//Creates folder if it does not already exist.
+func mayCreateFolder(path string) {
+	_, err := os.Stat(path)
+	if err == nil {
+		//folder exists
+	} else if errors.Is(err, os.ErrNotExist) {
+		os.Mkdir(path, 0755)
+	} else {
+		//Shadow realm
+		log.Fatal(err)
+	}
 }
