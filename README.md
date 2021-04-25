@@ -1,4 +1,5 @@
 ![Triangles](https://github.com/PhiloTFarnsworth/BitSprite/blob/main/docs/TriangleHeader.png)
+
 # BitSprite
 ## A Free 8-Bit Sprite Generator.  Create 256 variants from a single template .PNG
 
@@ -16,6 +17,7 @@ don't care to install the go language.  If just using the .EXE, mak
 folder, as BitSprite will look for a Templates folder in its directory to find templates.
 
 ![Flowers?](https://github.com/PhiloTFarnsworth/BitSprite/blob/main/docs/FlowersorSkullsHeader.png)
+
 ### Using BitSprite
 #### Creating a Template
 To create a template, open your favorite image editor.  In this example, we'll just use the venerable
@@ -52,7 +54,7 @@ If we run 
 ```
     BitSprite.exe -template=face
 ```
-we can check the GenerationDirectory and find this:
+we can check the GenerationDirectory and find FaceSpriteSheet.png:
 
 ![greyscale face sprite sheet](https://github.com/PhiloTFarnsworth/BitSprite/blob/main/docs/FaceSpriteSheet.png)
 
@@ -64,7 +66,8 @@ the image by 4, so that our original pixel is written as 4 pixels 
     BitSprite.exe -template=face -background=#ff00ff -upscale=4
 ```
 
-faceSpriteSheet.png should now look like this:
+FaceSpriteSheet.png should now look like this:
+
 ![greyscale face sprite sheet with magenta background, 4 times scale](https://github.com/PhiloTFarnsworth/BitSprite/blob/main/docs/FaceSpriteSheetUp.png)
 
 We can now see that our bit pixels are counting up in binary based on their position when read.  Our fill and accent
@@ -78,8 +81,6 @@ if we decide to run:
 ```
     BitSprite.exe -template=face -background=#ff00ff -upscale=4 -fold=odd
 ```
-
-we return:
 
 ![greyscale face sprite sheet with magenta background, 4 times scale unfolded](https://github.com/PhiloTFarnsworth/BitSprite/blob/main/docs/FaceSpriteSheetUpscaleEx.png)
 
@@ -128,74 +129,81 @@ After creating the .PNG template and placing it in the Templates fold
 can then use the command prompt, to create a template, based on the following flags:
 ```
 -template (required)
-    -template looks in the templates folder for a file named after the provided string, and if successful opens up the 
-    template .PNG for parsing.
+    -template looks in the templates folder for a file named after the provided string, and if 
+    successful opens up the template .PNG for parsing.
 ```
 ```
 -fold
-    -fold controls whether the template should be reflected across the rightmost bounds.  User has the option to
-    choose to fold even, and write the last column twice, or fold odd and have the last column of the template
-    only represented once in the output.  Acceptable Values: odd = odd, o; even = even, e. (Not case sensitive) 
+    -fold controls whether the template should be reflected across the rightmost bounds.  User 
+    has the option to choose to fold even, and write the last column twice, or fold odd and 
+    have the last column of the template only represented once in the output.  Acceptable 
+    Values: odd = odd, o; even = even, e. (Not case sensitive) 
 ```
 ```
 -color
-    -color designates the color of activated bit pixels, can be expressed as both a single Hex value or two Hex
-    values with a ':' in between.  Passing two Hex values will result in 'blended' shades between the
-    across the images of the sprite sheet. Acceptable Values: Hex or Hex:Hex (IE. #FFFFFF, #FFFFFF:#000000).
+    -color designates the color of activated bit pixels, can be expressed as both a single Hex value 
+    or two Hex values with a ':' in between.  Passing two Hex values will result in 'blended' shades 
+    between the designated colors across the images of the sprite sheet. Acceptable Values: Hex or 
+    Hex:Hex (#FFFFFF or #FFFFFF:#000000).
 ```
 ```
 -accent
-    -accent designates the color of accent pixels, can be expressed as both a single Hex value or two Hex
-    values with a ':' in between.  Passing two Hex values will result in 'blended' shades between the
-    across the images of the sprite sheet. Acceptable Values: Hex or Hex:Hex (IE #FFFFFF, #FFFFFF:#000000).
+    -accent designates the color of accent pixels, can be expressed as both a single Hex value or two 
+    Hex values with a ':' in between.  Passing two Hex values will result in 'blended' shades between 
+    the designated colors across the images of the sprite sheet. Acceptable Values: Hex or Hex:Hex 
+    (#FFFFFF or #FFFFFF:#000000).
 ```
 ```
 -fill
     -fill designates the color of fill pixels, can be expressed as both a single Hex value or two Hex
     values with a ':' in between.  Passing two Hex values will result in 'blended' shades between the
-    across the images of the sprite sheet. Acceptable Values: Hex or Hex:Hex (IE #FFFFFF, #FFFFFF:#000000).
+    designated colors across the images of the sprite sheet. Acceptable Values: Hex or Hex:Hex 
+    (#FFFFFF or #FFFFFF:#000000).
 ```
 ```
 -background
-    -background designates the color of background pixels, can be expressed as both a single Hex value or two Hex
-    values with a ':' in between.  Passing two Hex values will result in 'blended' shades between the
-    across the images of the sprite sheet. Acceptable Values: Hex or Hex:Hex (IE #FFFFFF, #FFFFFF:#000000).
+    -background designates the color of background pixels, can be expressed as both a single Hex value 
+    or two Hex values with a ':' in between.  Passing two Hex values will result in 'blended' shades 
+    between the designated colors across the images of the sprite sheet. Acceptable Values: Hex or 
+    Hex:Hex (IE #FFFFFF, #FFFFFF:#000000).
 ```
 ```
 -outcolor
-    -outcolor designates the color of outlines and deactivated bit pixels, can be expressed as both a single Hex value or two Hex
-    values with a ':' in between.  Passing two Hex values will result in 'blended' shades between the
-    across the images of the sprite sheet. Acceptable Values: Hex or Hex:Hex (IE #FFFFFF, #FFFFFF:#000000).
+    -outcolor designates the color of outlines and deactivated bit pixels, can be expressed as both a 
+    single Hex value or two Hex values with a ':' in between.  Passing two Hex values will result in 
+    'blended' shades between the designated colors across the images of the sprite sheet. Acceptable 
+    Values: Hex or Hex:Hex (IE #FFFFFF, #FFFFFF:#000000).
 ```
 ```
 -outline
-    -outline can be used to toggle whether BitSprite draws outlines around bit, accent and fill pixels.  Does not 
-    effect explicitly designated outline pixels.  Acceptable Values: True = true, t; false = false, f. (Not case
-    sensitive, accepts all Golang Bool values.)
+    -outline can be used to toggle whether BitSprite draws outlines around bit, accent and fill pixels.  
+    Does not effect explicitly designated outline pixels.  Acceptable Values: True = true, t; 
+    false = false, f. (Not case sensitive, accepts all Golang Bool values.)
 ```
 ```
 -upscale
-    -upscale controls the scale of the output images.  Keep in mind that 1 pixel -> 4 -> 9 as you scale in this
-    program, so excessively large values will start to chug.  Acceptable Values:  Positive integer (integers < 1
-    will automatically be set at 1).
+    -upscale controls the scale of the output images.  Keep in mind that 1 pixel -> 4 -> 9 as you scale
+    in this program, so excessively large values will start to chug.  Acceptable Values:  Positive integer 
+    (integers < 1 will automatically be set at 1).
 ```
 ```
 -sheetwidth
-    -sheetwidth controls the number of columns in an output Sprite Sheet.  Must be a factor of 256, otherwise
-    will default to 16 columns.  Acceptable Values: Positive factor of 256.
+    -sheetwidth controls the number of columns in an output Sprite Sheet.  Must be a factor of 256, 
+    otherwise will default to 16 columns.  Acceptable Values: Positive factor of 256.
 ```
 ```
 -outname
-    -outname controls the naming of the output directory and sprite sheet  Acceptable Values: Any string that doesn't
-    anger your OS.
+    -outname controls the naming of the output directory and sprite sheet  Acceptable Values: Any string
+    that doesn't anger your OS.
 ```
 ```
 -legacy
-    -legacy uses the original YCbCr gradient for coloring sprites. Acceptable Values: True = true, t; false = false, f. 
-    (Not case sensitive, accepts all Golang Bool values.)
+    -legacy uses the original YCbCr gradient for coloring sprites. Acceptable Values: True = true, t; 
+    false = false, f. (Not case sensitive, accepts all Golang Bool values.)
 ```
 
 ![Dog with hat](https://github.com/PhiloTFarnsworth/BitSprite/blob/main/docs/DogwHatHeader.png)
+
 ### Why?
 BitSprite is a quick and dirty approach to 'art', which allows the user to generate large amounts of assets in a 
 short time.  These assets are then stored for easy usage as both a sprite sheet and individual images.  In the
@@ -207,9 +215,11 @@ shapes.
 ### Further Reading
 http://web.archive.org/web/20080228054405/http://www.davebollinger.com/works/pixelrobots/
 -This project is inspired by this blog post, which gave some interesting ideas that were adapted either partially
-or full cloth.  Still need to adapt the color scheme.
+or full cloth.
 
 ### Todos
+-Comment audit
+-Tests
 Beyond further futzing with colors and how to define them, I think I've cleared the low hanging fruit.  That being
 said, please feel free to add issues or pull requests, I would love to get input on how to make even more interesting 
 generative art or less cluttered Go code.  
