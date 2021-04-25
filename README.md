@@ -105,7 +105,7 @@ across the entire sheet, for any of those values. 
     BitSprite.exe -template=face -upscale=4 -fold=odd -color=#9a3300:#4f1a00 -accent=#3d671d:#497665 -fill=#F1C27D:#503335
 ```
 
-![blended tones face sprite sheet 4 times scale, unfolded](https://github.com/PhiloTFarnsworth/BitSprite/blob/main/docs/FaceSpritSheetblend.png)
+![blended tones face sprite sheet 4 times scale, unfolded](https://github.com/PhiloTFarnsworth/BitSprite/blob/main/docs/FaceSpriteSheetblend.png)
 
 Now we can represent our little buddy across a variety of tones.  Finally, as an Easter Egg,
 we have the original rainbow gradient I used when I first developed the program.  While it
@@ -162,10 +162,10 @@ can then use the command prompt, to create a template, based on the�
 ```
 ```
 -background
-    -background designates the color of background pixels, can be expressed as both a single Hex value 
-    or two Hex values with a ':' in between.  Passing two Hex values will result in 'blended' shades 
-    between the designated colors across the images of the sprite sheet. Acceptable Values: Hex or 
-    Hex:Hex (IE #FFFFFF, #FFFFFF:#000000).
+    -background designates the color of background pixels, can be expressed as both a single Hex 
+    value or two Hex values with a ':' in between.  Passing two Hex values will result in 'blended' 
+    shades between the designated colors across the images of the sprite sheet. Acceptable Values: Hex 
+    or Hex:Hex (IE #FFFFFF, #FFFFFF:#000000).
 ```
 ```
 -outcolor
@@ -176,15 +176,15 @@ can then use the command prompt, to create a template, based on the�
 ```
 ```
 -outline
-    -outline can be used to toggle whether BitSprite draws outlines around bit, accent and fill pixels.  
-    Does not effect explicitly designated outline pixels.  Acceptable Values: True = true, t; 
+    -outline can be used to toggle whether BitSprite draws outlines around bit, accent and fill 
+    pixels.  Does not effect explicitly designated outline pixels.  Acceptable Values: True = true, t;
     false = false, f. (Not case sensitive, accepts all Golang Bool values.)
 ```
 ```
 -upscale
-    -upscale controls the scale of the output images.  Keep in mind that 1 pixel -> 4 -> 9 as you scale
-    in this program, so excessively large values will start to chug.  Acceptable Values:  Positive integer 
-    (integers < 1 will automatically be set at 1).
+    -upscale controls the scale of the output images.  Keep in mind that 1 pixel -> 4 -> 9 as you
+    scale in this program, so excessively large values will start to chug.  Acceptable Values:  Positive
+    integer (integers < 1 will automatically be set at 1).
 ```
 ```
 -sheetwidth
@@ -193,8 +193,8 @@ can then use the command prompt, to create a template, based on the�
 ```
 ```
 -outname
-    -outname controls the naming of the output directory and sprite sheet  Acceptable Values: Any string
-    that doesn't anger your OS.
+    -outname controls the naming of the output directory and sprite sheet  Acceptable Values: Any 
+    string that doesn't anger your OS.
 ```
 ```
 -legacy
