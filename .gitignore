@@ -2,3 +2,7 @@
 *.Prof
 *.out
 GenerationDirectory
+templates/*png
+!templates/Triangle.png
+!templates/Face.png
+Compositer

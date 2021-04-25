@@ -31,8 +31,8 @@ const (
 )
 
 //Colors to match for fab and outline
-var Black = color.RGBA{0, 0, 0, 255}
-var Red = color.RGBA{255, 0, 0, 255}
+var Black = color.Color(color.RGBA{0, 0, 0, 255})
+var Red = color.Color(color.RGBA{255, 0, 0, 255})
 var Green = color.RGBA{0, 255, 0, 255}
 var Blue = color.RGBA{0, 0, 255, 255}
 var Transp = color.RGBA{0, 0, 0, 0}
@@ -52,8 +52,9 @@ var backgroundPref = flag.String("background", "", "Sets color of background.")
 var outlineColorPref = flag.String("outcolor", "#000000", "Sets the color of the outline pixels.")
 var outlinePref = flag.Bool("outline", true, "Sets outline preference")
 var upscalePref = flag.Int("upscale", 1, "Increases the scale of the template's copies")
-var compositePref = flag.Int("sheetWidth", 8, "Sets width of output sprite sheet, must return a whole number for 256/compositeWidth")
+var compositePref = flag.Int("sheetwidth", 16, "Sets width of output sprite sheet, must return a whole number for 256/compositeWidth")
 var legacyColors = flag.Bool("legacy", false, "Colors are based on a composite linear gradient of the YCbCr at .5 lumia if true")
+var outputNamePref = flag.String("outname", "", "Sets the output files to be named after this string instead of the template name")
 var cpuprofile = flag.String("cpuprofile", "", "Write cpu profile to file")
 
 func main() {
@@ -90,6 +91,7 @@ func main() {
 	legacy := *legacyColors
 	upScale := *upscalePref
 	compositeWidth := *compositePref
+	outputName := *outputNamePref
 	//We're going to support blends for all of these variables, so first we'll pass our flags split as though it's blend
 	//code.
 	chosenColorStrings := make(map[Pixel][]string)
@@ -100,8 +102,8 @@ func main() {
 	chosenColorStrings[Outline] = strings.Split(*outlineColorPref, ":")
 
 	//There's a few ways we can handle bad compositePrefs, but defaulting to 8 is one solution.
-	if 256%compositeWidth != 0 {
-		compositeWidth = 8
+	if 256%compositeWidth != 0 || compositeWidth > 256 {
+		compositeWidth = 16
 		fmt.Print("Bad sheetWidth passed, defaulting to sheetWidth=8\n")
 	}
 
@@ -143,16 +145,20 @@ func main() {
 	check(err)
 	defer templateFile.Close()
 
+	if outputName != "" {
+		templateName = outputName
+	}
+
 	//Prepare the generation directories for the file here
 	currentDir, err := filepath.Abs("")
 	check(err)
 	genDirString := "/GenerationDirectory"
 	generationDirectory := filepath.Join(currentDir, genDirString)
 	mayCreateFolder(generationDirectory)
-	DirString := "GenerationDirectory/" + templateName
-	PlacementDirectory := filepath.Join(currentDir, DirString)
+	dirString := "GenerationDirectory/" + templateName
+	PlacementDirectory := filepath.Join(currentDir, dirString)
 	mayCreateFolder(PlacementDirectory)
-	individualSpriteDir := filepath.Join(currentDir, DirString+"/Individuals")
+	individualSpriteDir := filepath.Join(currentDir, dirString+"/Individuals")
 	mayCreateFolder(individualSpriteDir)
 
 	//Grab our template pixels and the template config
@@ -177,11 +183,14 @@ func main() {
 	}
 	canvasHeight := templateConfig.Height
 
-	//create an array and assign our pixels to it.  We could use
+	//create an array and assign our pixels to it.
 	var pixelList []Pixel
 	for y := 0; y < templateConfig.Height; y++ {
 		for x := 0; x < templateConfig.Width; x++ {
-			aPixel := templateStream.At(x, y)
+			//This was a bizarre fix.  Generally, .PNGs almost always return pixels encoded as RGBA, but by some happenstance
+			//I managed to create a .PNG which was read as NRGBA.  At any rate, this should work no matter what tomfoolery
+			//happens when you create the template .png.
+			aPixel := color.RGBAModel.Convert(templateStream.At(x, y))
 			//We compare the template's pixels to our defined colors, then append them to pixelList
 			switch aPixel {
 			case Red:
@@ -256,7 +265,6 @@ func main() {
 									newImage[yIndex] = Outline
 								}
 							}
-
 						}
 					}
 				}
@@ -286,8 +294,8 @@ func main() {
 			} else {
 				//legacy ycbcr gradients
 				finalColors[Bit] = color.YCbCr{128, uint8((i + 128) % 256), uint8(i % 256)}
-				finalColors[Accent] = color.YCbCr{32, uint8((i + 128) % 256), uint8(i % 256)}
-				finalColors[Fill] = color.YCbCr{224, uint8((i + 128) % 256), uint8(i % 256)}
+				finalColors[Accent] = color.YCbCr{64, uint8((i + 128) % 256), uint8(i % 256)}
+				finalColors[Fill] = color.YCbCr{192, uint8((i + 128) % 256), uint8(i % 256)}
 				finalColors[Background] = Transp
 				finalColors[Outline] = Black
 			}
@@ -305,7 +313,7 @@ func main() {
 					for j := 0; j < upScale; j++ {
 						for k := 0; k < upScale; k++ {
 							canvas.Set((x*upScale)+j, (y*upScale)+k, finalColors[newImage[pixelIndex]])
-							composite.Set((x*upScale)+j+canvasWidth*upScale*(i%8), (y*upScale)+k+canvasHeight*upScale*(i/8), finalColors[newImage[pixelIndex]])
+							composite.Set((x*upScale)+j+canvasWidth*upScale*(i%compositeWidth), (y*upScale)+k+canvasHeight*upScale*(i/compositeWidth), finalColors[newImage[pixelIndex]])
 						}
 					}
 				}
