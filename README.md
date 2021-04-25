@@ -36,7 +36,7 @@ They can also function as another static pixel if explicitly included in the tem
 generate borders around themselves like bit/accent/fill pixels do.  Background pixels are default transparent.  
 Let's look at what a compliant template may look like:
 
-[MS Paint Window with an open template file](https://github.com/PhiloTFarnsworth/BitSprite/blob/main/docs/ExampleTemplateWorkflow.png)
+![MS Paint Window with an open template file](https://github.com/PhiloTFarnsworth/BitSprite/blob/main/docs/ExampleTemplateWorkflow.png)
 
 This example shows a template image at 800% zoom, with each square of color representing one pixel.
 Notice that there are 5 colors used in the 'face' image, all of which correspond to our control scheme. 
@@ -47,7 +47,7 @@ BitSprite.exe -template=face
 '''
 we can check the GenerationDirectory and find this:
 
-[greyscale face spritesheet](https://github.com/PhiloTFarnsworth/BitSprite/blob/main/docs/FaceSpriteSheet.png)
+![greyscale face spritesheet](https://github.com/PhiloTFarnsworth/BitSprite/blob/main/docs/FaceSpriteSheet.png)
 
 It's a little small.  The transparent background also does no favors for visibility with this basic grayscale.
 Instead let's return a large image with a better background.  We'll set the background to magenta and we'll scale
@@ -58,7 +58,7 @@ BitSprite.Exe -template=face -background=#ff00ff -upscale=4
 '''
 
 faceSpriteSheet.png should now look like this:
-[greyscale face spritesheet with magenta background, 4 times scale](https://github.com/PhiloTFarnsworth/BitSprite/blob/main/docs/FaceSpriteSheetUp.png)
+![greyscale face spritesheet with magenta background, 4 times scale](https://github.com/PhiloTFarnsworth/BitSprite/blob/main/docs/FaceSpriteSheetUp.png)
 
 We can now see that our bit pixels are counting up in binary based on their position when read.  Our fill and accent
 pixels remain the same through each iteration, with distinct colors.  The activated bit pixels also influence the
@@ -74,7 +74,7 @@ BitSprite.exe -template=face -background=#ff00ff -upscale=4 -fold=odd
 
 we return:
 
-[greyscale face spritesheet with magenta background, 4 times scale unfolded](https://github.com/PhiloTFarnsworth/BitSprite/blob/main/docs/FaceSpriteSheetUpEx.png)
+![greyscale face spritesheet with magenta background, 4 times scale unfolded](https://github.com/PhiloTFarnsworth/BitSprite/blob/main/docs/FaceSpriteSheetUpEx.png)
 
 Now we have a symettrical image, and also one that allows your imagination to wander a little bit. 
 Is it the many hairstyles of Tommy Pickles? Maybe it is a happy slime, expanding and contracting 
@@ -88,7 +88,7 @@ a face with facial hair.  (Values supplied by google)
 BitSprite.exe -template=face -upscale=4 -fold=odd -color=#9a3300 -accent=#3d671d -fill=#F1C27D
 '''
 
-[colored in face spritesheet 4 times scale, unfolded](https://github.com/PhiloTFarnsworth/BitSprite/blob/main/docs/FaceSpriteSheetColor.png)
+![colored in face spritesheet 4 times scale, unfolded](https://github.com/PhiloTFarnsworth/BitSprite/blob/main/docs/FaceSpriteSheetColor.png)
 
 With color, we create a passable face.  But we're not done yet, we can also do a blend of tones
 across the entire sheet, for any of those values. 
@@ -97,7 +97,7 @@ across the entire sheet, for any of those values.
 BitSprite.exe -template=face -upscale=4 -fold=odd -color=#9a3300:#4f1a00 -accent=#3d671d:#497665 -fill=#F1C27D:#503335
 '''
 
-[blended tones face spritesheet 4 times scale, unfolded](https://github.com/PhiloTFarnsworth/BitSprite/blob/main/docs/FaceSpritSheetblend.png)
+![blended tones face spritesheet 4 times scale, unfolded](https://github.com/PhiloTFarnsworth/BitSprite/blob/main/docs/FaceSpritSheetblend.png)
 
 Now we can represent our little buddy across a variety of tones.  Finally, as an Easter Egg,
 we have the original rainbow gradient I used when I first developed the program.  While it
@@ -107,7 +107,7 @@ lacks granular control, I think it looks neat.
 BitSprite.exe -template=face -upcalse=4 -fold=odd -legacy=true
 '''
 
-[Legacy gradient face spritesheet 4 times scale, unfolded](https://github.com/PhiloTFarnsworth/BitSprite/blob/main/docs/FaceSpriteSheetlegacy.png)
+![Legacy gradient face spritesheet 4 times scale, unfolded](https://github.com/PhiloTFarnsworth/BitSprite/blob/main/docs/FaceSpriteSheetlegacy.png)
 
 It's a candy colored nightmare to be sure, but it can be useful when you're unsure what color you might want
 to base your sprites on.  This is created by running across two gradients at .5 lumia on the YCbCr color scheme,
