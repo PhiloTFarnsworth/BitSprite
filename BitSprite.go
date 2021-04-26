@@ -56,7 +56,7 @@ var outputNamePref = flag.String("outname", "", "Sets the output files to be pla
 
 func main() {
 	//Profiling
-	// flag.Parse()
+	flag.Parse()
 	// if *cpuprofile != "" {
 	// 	f, err := os.Create(*cpuprofile)
 	// 	if err != nil {
