@@ -10,8 +10,6 @@ import (
 	"log"
 	"os"
 	"path/filepath"
-	"runtime/pprof"
-	"runtime/trace"
 	"strconv"
 	"strings"
 	"sync"
@@ -53,32 +51,33 @@ var upscalePref = flag.Int("upscale", 1, "Increases the scale of the template's 
 var compositePref = flag.Int("sheetwidth", 16, "Sets width of output sprite sheet, use a factor of 256.")
 var legacyColors = flag.Bool("legacy", false, "Colors are based on a composite linear gradient of the YCbCr at .5 lumia if true, use Golang Bool values.")
 var outputNamePref = flag.String("outname", "", "Sets the output files to be placed in a generation directory named after the string provided.")
-var cpuprofile = flag.String("cpuprofile", "", "Write cpu profile to file")
+
+//var cpuprofile = flag.String("cpuprofile", "", "Write cpu profile to file")
 
 func main() {
 	//Profiling
-	flag.Parse()
-	if *cpuprofile != "" {
-		f, err := os.Create(*cpuprofile)
-		if err != nil {
-			log.Fatal(err)
-		}
-		pprof.StartCPUProfile(f)
-		defer pprof.StopCPUProfile()
-	}
+	// flag.Parse()
+	// if *cpuprofile != "" {
+	// 	f, err := os.Create(*cpuprofile)
+	// 	if err != nil {
+	// 		log.Fatal(err)
+	// 	}
+	// 	pprof.StartCPUProfile(f)
+	// 	defer pprof.StopCPUProfile()
+	// }
 
 	//Trace
-	f, err := os.Create("trace.out")
-	if err != nil {
-		panic(err)
-	}
-	defer f.Close()
+	// f, err := os.Create("trace.out")
+	// if err != nil {
+	// 	panic(err)
+	// }
+	// defer f.Close()
 
-	err = trace.Start(f)
-	if err != nil {
-		panic(err)
-	}
-	defer trace.Stop()
+	// err = trace.Start(f)
+	// if err != nil {
+	// 	panic(err)
+	// }
+	// defer trace.Stop()
 
 	//Now the program can begin
 	fmt.Print("BitSprite: Making 256 versions of 1 thing since 2021\n")
