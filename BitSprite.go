@@ -141,7 +141,9 @@ func main() {
 	}
 
 	//Open the templateFile
-	templateFile, err := os.Open("Templates/" + templateName + ".png")
+	currentDir, err := filepath.Abs("")
+	check(err)
+	templateFile, err := os.Open(filepath.Join(currentDir, "/Templates/"+templateName+".png"))
 	check(err)
 	defer templateFile.Close()
 
@@ -150,8 +152,7 @@ func main() {
 	}
 
 	//Prepare the generation directories for the file here.
-	currentDir, err := filepath.Abs("")
-	check(err)
+
 	generationDirectory := filepath.Join(currentDir, "/GenerationDirectory")
 	mayCreateFolder(generationDirectory)
 	dirString := "GenerationDirectory/" + templateName
@@ -238,20 +239,18 @@ func main() {
 			if outlines {
 				for j := 0; j < len(newImage); j++ {
 					if newImage[j] == Bit || newImage[j] == Fill || newImage[j] == Accent {
-						//There's likely a better way, but for now we'll translate our index into a coordinate, then
-						//check for neighbors
-						pixelCoord := image.Point{(j % templateConfig.Width), int(j / templateConfig.Width)}
 						for k := -1; k < 2; k = k + 2 {
-							//left, right
-							if templateConfig.Width > pixelCoord.X+k && pixelCoord.X+k >= 0 {
-								xIndex := pixelCoord.X + k + (pixelCoord.Y * templateConfig.Width)
-								if newImage[xIndex] == Background {
-									newImage[xIndex] = Outline
+							//left, right; the remainder of the index gives us an x coordinate
+							if templateConfig.Width > (j%templateConfig.Width)+k && (j%templateConfig.Width)+k >= 0 {
+								//if x-coord is good we can just add k to our index
+								if newImage[j+k] == Background {
+									newImage[j+k] = Outline
 								}
 							}
-							//up, down
-							if templateConfig.Height > pixelCoord.Y+k && pixelCoord.Y+k >= 0 {
-								yIndex := pixelCoord.X + ((pixelCoord.Y + k) * templateConfig.Width)
+							//up, down; use int()'s inherent round down ability to create our y coordinate
+							if templateConfig.Height > int(j/templateConfig.Width)+k && int(j/templateConfig.Width)+k >= 0 {
+								//looks gross, but it works.
+								yIndex := (j % templateConfig.Width) + ((int(j/templateConfig.Width) + k) * templateConfig.Width)
 								if newImage[yIndex] == Background {
 									newImage[yIndex] = Outline
 								}

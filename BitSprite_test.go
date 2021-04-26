@@ -126,7 +126,7 @@ func TestInputSanitizers(t *testing.T) {
 }
 
 func BenchmarkDefault(b *testing.B) {
-	os.Args = []string{"cmd", "-template=triangle", "-legacy=f"}
+	os.Args = []string{"cmd", "-template=triangle", "-color=", "-accent=", "-fill=", "-sheetwidth=16", "-upscale=1", "-outname="}
 	for i := 0; i < b.N; i++ {
 		main()
 	}
