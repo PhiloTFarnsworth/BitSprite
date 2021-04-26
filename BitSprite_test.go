@@ -5,6 +5,7 @@ import (
 	"image"
 	"image/png"
 	"os"
+	"path/filepath"
 	"testing"
 )
 
@@ -102,8 +103,8 @@ func TestBackgroundColor(t *testing.T) {
 }
 
 func TestLegacy(t *testing.T) {
-	gotFileName := "GenerationDirectory/Triangle/TriangleSpriteSheet.png"
-	wantFileName := "testResources/TriangleSSLegacy.png"
+	gotFileName := "/GenerationDirectory/Triangle/TriangleSpriteSheet.png"
+	wantFileName := "/testResources/TriangleSSLegacy.png"
 	testArgs := []string{"cmd", "-template=triangle", "-background=", "-legacy=t"}
 	Compare(t, gotFileName, wantFileName, testArgs)
 }
@@ -117,12 +118,17 @@ func Compare(t *testing.T, gotFileName, wantFileName string, testArgs []string) 
 
 	main()
 
-	gotFile, err := os.Open(gotFileName)
+	currentDir, err := filepath.Abs("")
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	wantFile, err := os.Open(wantFileName)
+	gotFile, err := os.Open(filepath.Join(currentDir + "/" + gotFileName))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	wantFile, err := os.Open(filepath.Join(currentDir + "/" + wantFileName))
 	if err != nil {
 		t.Fatal(err)
 	}
