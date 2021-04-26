@@ -109,6 +109,34 @@ func TestLegacy(t *testing.T) {
 	Compare(t, gotFileName, wantFileName, testArgs)
 }
 
+func BenchmarkDefault(b *testing.B) {
+	os.Args = []string{"cmd", "-template=triangle", "-legacy=f"}
+	for i := 0; i < b.N; i++ {
+		main()
+	}
+}
+
+func BenchmarkTenScale(b *testing.B) {
+	os.Args = []string{"cmd", "-template=triangle", "-upscale=10"}
+	for i := 0; i < b.N; i++ {
+		main()
+	}
+}
+
+func BenchmarkBlends(b *testing.B) {
+	os.Args = []string{"cmd", "-template=triangle", "-upscale=1", "-color=#ff0000:#00ff00", "-accent=#00ff00:#0000ff", "-fill=#0000ff:#ff0000"}
+	for i := 0; i < b.N; i++ {
+		main()
+	}
+}
+
+func BenchmarkLegacy(b *testing.B) {
+	os.Args = []string{"cmd", "-template=triangle", "-upscale=1", "-color=#", "-accent=", "-fill="}
+	for i := 0; i < b.N; i++ {
+		main()
+	}
+}
+
 func Compare(t *testing.T, gotFileName, wantFileName string, testArgs []string) {
 	os.Args = testArgs
 	for i := range os.Args {
