@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"image"
 	"image/png"
 	"os"
@@ -109,6 +108,23 @@ func TestLegacy(t *testing.T) {
 	Compare(t, gotFileName, wantFileName, testArgs)
 }
 
+func TestFace(t *testing.T) {
+	gotFileName := "/GenerationDirectory/face/faceSpriteSheet.png"
+	wantFileName := "/testResources/faceSS.png"
+	testArgs := []string{"cmd", "-template=face", "-legacy=f", "-color=#ff0000", "-accent=#00ff00", "-fill=#0000ff", "-fold=odd"}
+	Compare(t, gotFileName, wantFileName, testArgs)
+}
+
+//This also tests the reading of red template pixels (outlines), which I forgot to consider.  We'll
+//use the example face.png template to have that included.  Do this test last otherwise you need to reset
+//all the flags set here.
+func TestInputSanitizers(t *testing.T) {
+	gotFileName := "/GenerationDirectory/BadInput/BadInputSpriteSheet.png"
+	wantFileName := "/testResources/faceSSbadinput.png"
+	testArgs := []string{"cmd", "-template=face", "-legacy=f", "-color=badInput", "-accent=BadInput", "-fill=BadInput", "-sheetwidth=1000", "-upscale=0", "-outname=BadInput", "-fold=none"}
+	Compare(t, gotFileName, wantFileName, testArgs)
+}
+
 func BenchmarkDefault(b *testing.B) {
 	os.Args = []string{"cmd", "-template=triangle", "-legacy=f"}
 	for i := 0; i < b.N; i++ {
@@ -139,10 +155,6 @@ func BenchmarkLegacy(b *testing.B) {
 
 func Compare(t *testing.T, gotFileName, wantFileName string, testArgs []string) {
 	os.Args = testArgs
-	for i := range os.Args {
-		fmt.Printf(os.Args[i])
-		fmt.Printf("\n")
-	}
 
 	main()
 
