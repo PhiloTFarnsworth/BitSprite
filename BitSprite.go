@@ -28,33 +28,31 @@ const (
 	Accent
 	Fill
 	Outline
+	PixelsDefined //Add any new tracked pixels above this.
 )
 
-//Colors to match for fab and outline
-var Black = color.Color(color.RGBA{0, 0, 0, 255})
-var Red = color.Color(color.RGBA{255, 0, 0, 255})
+var Black = color.RGBA{0, 0, 0, 255}
+var Red = color.RGBA{255, 0, 0, 255}
 var Green = color.RGBA{0, 255, 0, 255}
 var Blue = color.RGBA{0, 0, 255, 255}
+var White = color.RGBA{255, 255, 255, 255}
 var Transp = color.RGBA{0, 0, 0, 0}
 var LGray = color.RGBA{85, 85, 85, 255}
 var HGray = color.RGBA{170, 170, 170, 255}
-var White = color.RGBA{255, 255, 255, 255}
 
-//The big idea here is that we want some granular control for the user, but without too much extra.  Ideally, the user
-//could do bitsprite.exe -template=somefile and have something interesting pop out, while another user could load up on
-//flags and have their specific needs met.
-var templateString = flag.String("template", "", "Choose template to render")
-var foldPref = flag.String("fold", "", "Sets fold preference for template if desired. (e=Even, o=odd)")
-var colorPref = flag.String("color", "", "Sets color of activated bit pixels.")
-var accentPref = flag.String("accent", "", "Sets the color of the accent pixels.")
-var fillPref = flag.String("fill", "", "Sets the color of the fill pixels.")
-var backgroundPref = flag.String("background", "", "Sets color of background.")
-var outlineColorPref = flag.String("outcolor", "#000000", "Sets the color of the outline pixels.")
-var outlinePref = flag.Bool("outline", true, "Sets outline preference")
-var upscalePref = flag.Int("upscale", 1, "Increases the scale of the template's copies")
-var compositePref = flag.Int("sheetwidth", 16, "Sets width of output sprite sheet, must return a whole number for 256/compositeWidth")
-var legacyColors = flag.Bool("legacy", false, "Colors are based on a composite linear gradient of the YCbCr at .5 lumia if true")
-var outputNamePref = flag.String("outname", "", "Sets the output files to be named after this string instead of the template name")
+//Flags.  Trying to be a bit more terse than the readme.  out- names are probably too abundant, and legacy is not ideal.
+var templateString = flag.String("template", "", "Choose template to render, template must be in Templates folder.")
+var foldPref = flag.String("fold", "", "Sets fold preference for template if desired, use even and odd, all other values default to no fold. (e, even=Even; o, odd=Odd)")
+var colorPref = flag.String("color", "", "Sets color of activated bit pixels, use Hex or Hex:Hex (#FFFFFF or #000000:#FFFFFF).")
+var accentPref = flag.String("accent", "", "Sets the color of the accent pixels, use Hex or Hex:Hex (#FFFFFF or #000000:#FFFFFF).")
+var fillPref = flag.String("fill", "", "Sets the color of the fill pixels,  use Hex or Hex:Hex (#FFFFFF or #000000:#FFFFFF).")
+var backgroundPref = flag.String("background", "", "Sets color of background,  use Hex or Hex:Hex (#FFFFFF or #000000:#FFFFFF).")
+var outlineColorPref = flag.String("outcolor", "#000000", "Sets the color of the outline pixels,  use Hex or Hex:Hex (#FFFFFF or #000000:#FFFFFF).")
+var outlinePref = flag.Bool("outline", true, "Sets outline preference, use Golang Bool values.")
+var upscalePref = flag.Int("upscale", 1, "Increases the scale of the template's copies, use a positive integer.")
+var compositePref = flag.Int("sheetwidth", 16, "Sets width of output sprite sheet, use a factor of 256.")
+var legacyColors = flag.Bool("legacy", false, "Colors are based on a composite linear gradient of the YCbCr at .5 lumia if true, use Golang Bool values.")
+var outputNamePref = flag.String("outname", "", "Sets the output files to be placed in a generation directory named after the string provided.")
 var cpuprofile = flag.String("cpuprofile", "", "Write cpu profile to file")
 
 func main() {
@@ -83,7 +81,8 @@ func main() {
 	defer trace.Stop()
 
 	//Now the program can begin
-	fmt.Print("BitSprite: Making 256 versions of 1 thing since 2020\n")
+	fmt.Print("BitSprite: Making 256 versions of 1 thing since 2021\n")
+
 	//Grab the flag values
 	templateName := *templateString
 	folding := *foldPref
@@ -92,8 +91,9 @@ func main() {
 	upScale := *upscalePref
 	compositeWidth := *compositePref
 	outputName := *outputNamePref
-	//We're going to support blends for all of these variables, so first we'll pass our flags split as though it's blend
-	//code.
+
+	//We'll preemptively break down our colors strings as though they were blend values.  We'll use our
+	//enumerated Pixel values to put them on a temporary map.  Sorta chunky, but it's readable enough.
 	chosenColorStrings := make(map[Pixel][]string)
 	chosenColorStrings[Bit] = strings.Split(*colorPref, ":")
 	chosenColorStrings[Accent] = strings.Split(*accentPref, ":")
@@ -101,14 +101,8 @@ func main() {
 	chosenColorStrings[Background] = strings.Split(*backgroundPref, ":")
 	chosenColorStrings[Outline] = strings.Split(*outlineColorPref, ":")
 
-	//There's a few ways we can handle bad compositePrefs, but defaulting to 8 is one solution.
-	if 256%compositeWidth != 0 || compositeWidth > 256 {
-		compositeWidth = 16
-		fmt.Print("Bad sheetWidth passed, defaulting to sheetWidth=8\n")
-	}
-
+	//Converts those hexes into colors.
 	chosenColors := make(map[Pixel][]color.Color)
-	//We check for length of our flag values, if we split into multiple strings, we expect to blend.
 	for key, val := range chosenColorStrings {
 		if len(val) == 1 {
 			//We'll use these default values if nothing is defined
@@ -135,6 +129,12 @@ func main() {
 		}
 	}
 
+	//There's a few ways we can handle bad sheetwidth flags, defaulting to 16 is one solution.
+	if 256%compositeWidth != 0 || compositeWidth > 256 || compositeWidth < 1 {
+		compositeWidth = 16
+		fmt.Print("Bad sheetWidth passed, defaulting to sheetWidth=16\n")
+	}
+
 	//sanitize upScale
 	if upScale < 1 {
 		upScale = 1
@@ -149,11 +149,10 @@ func main() {
 		templateName = outputName
 	}
 
-	//Prepare the generation directories for the file here
+	//Prepare the generation directories for the file here.
 	currentDir, err := filepath.Abs("")
 	check(err)
-	genDirString := "/GenerationDirectory"
-	generationDirectory := filepath.Join(currentDir, genDirString)
+	generationDirectory := filepath.Join(currentDir, "/GenerationDirectory")
 	mayCreateFolder(generationDirectory)
 	dirString := "GenerationDirectory/" + templateName
 	PlacementDirectory := filepath.Join(currentDir, dirString)
@@ -168,7 +167,7 @@ func main() {
 	templateConfig, err := png.DecodeConfig(templateFile)
 	check(err)
 
-	//Grab our values to build an individual new image.
+	//Use folding to determine the dimensions of the output images.
 	var canvasWidth int
 	var foldAt int
 	if strings.EqualFold(folding, "even") || strings.EqualFold(folding, "e") {
@@ -183,51 +182,46 @@ func main() {
 	}
 	canvasHeight := templateConfig.Height
 
-	//create an array and assign our pixels to it.
-	var pixelList []Pixel
+	//Translate the image into a simple array.
+	var templateArray []Pixel
 	for y := 0; y < templateConfig.Height; y++ {
 		for x := 0; x < templateConfig.Width; x++ {
-			//This was a bizarre fix.  Generally, .PNGs almost always return pixels encoded as RGBA, but by some happenstance
-			//I managed to create a .PNG which was read as NRGBA.  At any rate, this should work no matter what tomfoolery
-			//happens when you create the template .png.
+			//Convert pixel model to RGBA.
 			aPixel := color.RGBAModel.Convert(templateStream.At(x, y))
-			//We compare the template's pixels to our defined colors, then append them to pixelList
+			//We compare the template's pixels to our defined colors, then append them to templateArray
 			switch aPixel {
 			case Red:
-				pixelList = append(pixelList, Outline)
+				templateArray = append(templateArray, Outline)
 			case Green:
-				pixelList = append(pixelList, Accent)
+				templateArray = append(templateArray, Accent)
 			case Blue:
-				pixelList = append(pixelList, Fill)
+				templateArray = append(templateArray, Fill)
 			case Black:
-				pixelList = append(pixelList, Bit)
+				templateArray = append(templateArray, Bit)
 			default:
-				pixelList = append(pixelList, Background)
+				templateArray = append(templateArray, Background)
 			}
 		}
 	}
 
-	//composite is our sprite sheet, we'll draw it up simultaneously with our individual images.
+	//composite is our sprite sheet, and we'll draw it up simultaneously with our individual images.
 	composite := image.NewRGBA(image.Rectangle{image.Point{0, 0}, image.Point{canvasWidth * upScale * compositeWidth, canvasHeight * upScale * 256 / compositeWidth}})
 
-	//While we could benefit from making fewer work groups of routines, I don't find the performance penalty
-	//on smaller files as too painful when compared to the gains this makes on larger files.  This was 2x faster
-	//than a sequential write for a 5x5 image, and was very fast on a 77x154 image.
+	//This is admittedly lazy, but as it stands I don't have a great solution in mind for scaling wait groups based on the pixels we write.  There is definitely a
+	//point where you gain some extra performance by using fewer wait groups that have responsibility for multiple images, but it's a little fuzzy and probably
+	//not worth the testing time and added code complexity to find those points.
 	var wg sync.WaitGroup
 	wg.Add(256)
 
 	for i := 0; i < 256; i++ {
 		go func(i int) {
-
 			defer wg.Done()
-			//We'll create the modified template based on our pixel list, where we modify our outlines based
-			//on the status of nearby bits.
+			//newImage will hold a modified template array, based on how we read our bit pixels and our outline settings.
 			var newImage []Pixel
 			bitsRead := 0
-			//I think the bitarray has been more for my benefit, I should be able to write this without the bitarray being set.
-			for j := 0; j < len(pixelList); j++ {
-				if pixelList[j] == Bit {
-					//We take our increment, shift it by the bitsRead, finally checking whether it is even odd.  This way 0 = all inactive,
+			for j := 0; j < len(templateArray); j++ {
+				if templateArray[j] == Bit {
+					//We take our increment, shift it by the bitsRead, finally checking whether it is even or odd.  This way 0 = all inactive,
 					//255 = all active.
 					if (i>>(bitsRead%8))&1 == 0 {
 						newImage = append(newImage, Outline)
@@ -236,29 +230,26 @@ func main() {
 					}
 					bitsRead++
 				} else {
-					newImage = append(newImage, pixelList[j])
+					newImage = append(newImage, templateArray[j])
 				}
 			}
-
-			//I've gone through a few implementations, but have landed on this for drawing our outlines.  We
-			//just want to check if it is a colored pixel, and if so, then we check if there are any Background
-			//pixels adjacent.  This should also be an optional process, in case the user does not want to have an
-			//outline
+			//checks neighbors of active, colored pixels.  If the neighboring pixel is a background, replace it with an outline
+			//pixel.  Disabled by -outline=false
 			if outlines {
 				for j := 0; j < len(newImage); j++ {
 					if newImage[j] == Bit || newImage[j] == Fill || newImage[j] == Accent {
-						//Here we want to check for bit pixels across the cardinal directions. I opted for
-						//simplifying the loop to check these combinations, so we translate our index into a coordinate.
+						//There's likely a better way, but for now we'll translate our index into a coordinate, then
+						//check for neighbors
 						pixelCoord := image.Point{(j % templateConfig.Width), int(j / templateConfig.Width)}
 						for k := -1; k < 2; k = k + 2 {
-							//another benefit of translation, easier to check for whether a pixel is
-							//actually adjacent or whether the next pixel is on the next different row
+							//left, right
 							if templateConfig.Width > pixelCoord.X+k && pixelCoord.X+k >= 0 {
 								xIndex := pixelCoord.X + k + (pixelCoord.Y * templateConfig.Width)
 								if newImage[xIndex] == Background {
 									newImage[xIndex] = Outline
 								}
 							}
+							//up, down
 							if templateConfig.Height > pixelCoord.Y+k && pixelCoord.Y+k >= 0 {
 								yIndex := pixelCoord.X + ((pixelCoord.Y + k) * templateConfig.Width)
 								if newImage[yIndex] == Background {
@@ -272,15 +263,10 @@ func main() {
 
 			// With the template adjusted, we create the output file for each image.
 			newFile := individualSpriteDir + "/" + strconv.Itoa(i) + ".png"
-
 			outfile, err := os.Create(newFile)
 			check(err)
-
 			canvas := image.NewRGBA(image.Rectangle{image.Point{0, 0}, image.Point{canvasWidth * upScale, canvasHeight * upScale}})
 
-			//Instead of writing our picture out as a list, we are using the x and y loops to more
-			//easily fold our images.
-			var pixelIndex int
 			//let's grab the base color for our image
 			finalColors := make(map[Pixel]color.Color)
 			if !legacy {
@@ -299,6 +285,9 @@ func main() {
 				finalColors[Background] = Transp
 				finalColors[Outline] = Black
 			}
+
+			//Finally, with colors and a template secured, we can write to our individual canvas and collective composite.
+			var pixelIndex int
 			for y := 0; y < canvasHeight; y++ {
 				for x := 0; x < canvasWidth; x++ {
 					//We want to start by converting our coordinate into an index position.  When we fold,
@@ -308,8 +297,7 @@ func main() {
 					} else {
 						pixelIndex = (canvasWidth - x) + (y * templateConfig.Width) - 1
 					}
-					//Messy.  Essentially we read the pixel index on our newImage, then we set the pixels on the actual image while
-					//accomodating for scale.
+					//A little messy, but we account for upScale here.
 					for j := 0; j < upScale; j++ {
 						for k := 0; k < upScale; k++ {
 							canvas.Set((x*upScale)+j, (y*upScale)+k, finalColors[newImage[pixelIndex]])

@@ -1,14 +1,13 @@
 ![Triangles](https://github.com/PhiloTFarnsworth/BitSprite/blob/main/docs/TriangleHeader.png)
 
 # BitSprite
-## A Free 8-Bit Sprite Generator.  Create 256 variants from a single template .PNG
+## A Free 8-Bit Sprite Generator.
 
 ### What?
 BitSprite is a program that creates variants of an image based on prepared template image, as well
-as creating a total sprite sheet of the resultant images.
-After downloading the package, or the .exe, the user can use the command prompt to run the program,
-using flags to control the results.  The user has several options to designate colors, as well as
-'unfold' the template to create symmetrical images.
+as creating a total sprite sheet of the resultant images. After downloading the package, or the .exe, 
+the user can use the command prompt to run the program, using flags to control the results.  The user 
+has several options to designate colors, as well as 'unfold' the template to create symmetrical images.
 
 
 ### Install
@@ -214,12 +213,10 @@ shapes.
 
 ### Further Reading
 http://web.archive.org/web/20080228054405/http://www.davebollinger.com/works/pixelrobots/
--This project is inspired by this blog post, which gave some interesting ideas that were adapted either partially
-or full cloth.
+-This project is inspired by this blog post, which I think is a very interesting dive into generated art and some nifty 
+things you can do with it.
 
 ### Todos
--Comment audit
--Tests
 Beyond further futzing with colors and how to define them, I think I've cleared the low hanging fruit.  That being
 said, please feel free to add issues or pull requests, I would love to get input on how to make even more interesting 
 generative art or less cluttered Go code.  
