@@ -100,7 +100,7 @@ Notice the vertfold uses the same inputs as fold, and even better, we can combin
     BitSprite.exe -template=triangle -upscale=4 -vertfold=even -fold=even
 ```
 
-![greyscale triangle sprite sheet, 4 times scale unfolded vertically and horizontally]((https://github.com/PhiloTFarnsworth/BitSprite/blob/main/docs/triangleSSvertEfoldE.png)
+![greyscale triangle sprite sheet, 4 times scale unfolded vertically and horizontally](https://github.com/PhiloTFarnsworth/BitSprite/blob/main/docs/triangleSSvertEfoldE.png)
 
 
 #### It's still a little bland
