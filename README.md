@@ -4,7 +4,7 @@
 ## A Free 8-Bit Sprite Generator.
 
 ### What?
-BitSprite is a program that creates variants of an image based on prepared template image, as well as creating a total sprite sheet of the resultant images. After downloading the package, or the .exe, the user can use the command prompt to run the program, using flags to control the results.  The user has several options to designate colors, as well as 'unfold' the template to create symmetrical images.
+BitSprite is a program that creates variants of an image across total sprite sheet of the resultant images.  By taking the index of the variant as it lays on the sprite sheet, Bitsprite uses that index number to activate or deactivate certain designated pixels based on its representation as a binary number. After downloading the package, or the .exe, the user can use the command prompt to run the program, using flags to control the results.  The user has several options to designate colors, as well as 'unfold' the template to create symmetrical images.
 
 
 ### Install
@@ -69,8 +69,33 @@ if we decide to run:
 
 Now we have a symmetrical image, and also one that allows your imagination to wander a little bit. Is it the many hairstyles of Tommy Pickles? Maybe it is a happy slime, expanding and contracting across the sprite sheet? You decide!
 
+We can also reflect our images across the bottom of the image as well.  Let's check out the triangle template provided:
+
+```
+    Bitsprite.exe -template=triangle -upscale=4
+```
+
+![greyscale triangle sprite sheet, 4 times scale](https://github.com/PhiloTFarnsworth/BitSprite/blob/main/docs/triangleSSvanilla.png)
+
+Now if we want to fold it vertically:
+
+```
+    BitSprite.exe -template=triangle -upscale=4 -vertfold=odd
+```
+
+![greyscale triangle sprite sheet, 4 times scale unfolded vertically](https://github.com/PhiloTFarnsworth/BitSprite/blob/main/docs/triangleSSvert.png)
+
+Notice the vertfold uses the same inputs as fold, and even better, we can combine the two:
+
+```
+    BitSprite.exe -template=triangle -upscale=4 -vertfold=even -fold=even
+```
+
+![greyscale triangle sprite sheet, 4 times scale unfolded vertically and horizontally]((https://github.com/PhiloTFarnsworth/BitSprite/blob/main/docs/triangleSSvertEfoldE.png)
+
+
 #### It's still a little bland
-Fine, BitSprite also supports some cool ways to control colors.  Let's say for the time being we've decided it's a face with facial hair.  (Values supplied by google, "Face color hex codes")
+Fine, BitSprite also supports some cool ways to control colors.
 
 ```
     BitSprite.exe -template=face -upscale=4 -fold=odd -color=#9a3300 -accent=#3d671d -fill=#F1C27D
@@ -111,6 +136,10 @@ Template looks in the templates folder for a file named after the pr
 Fold controls whether the template should be reflected across the rightmost bounds.  User has the option to choose to fold even, and write the last column twice or fold odd and have the last column of the template only represented once in the output.  
 
 ```
+-vertfold   Expected Values: odd = odd, o; even = even, e. (Not case sensitive)
+```
+Vertfold controls whether the template should be reflected across the bottom bounds.  User has the option to choose to fold even, and write the last row twice or fold odd and have the last row of the template only represented once in the output.  
+```
 -color   Expected Values: Hex or Hex:Hex (#FFFFFF or #FFFFFF:#000000).
 ```
 Color designates the color of activated bit pixels, can be expressed as both a single Hex value or two Hex values with a ':' in between.Passing two Hex values will result in 'blended' shades between the designated colors across the images of the sprite sheet. 
@@ -146,7 +175,12 @@ Sheetwidth controls the number of columns in an output Sprite Sheet. 
 ```
 -outname    Expected Values: Any string that doesn't anger your OS.
 ```
-Outname controls the naming of the output directory and sprite sheet  
+Outname controls the naming of the output directory and sprite sheet 
+```
+-individuals    Expected Values: True = true, t; false = false, f. (Not case sensitive, accepts all Golang Bool values.
+``` 
+Indivduals controls whether BitSprite creates a directory with individual .png files of all the images that constitute the spritesheet.  Defaults
+to false. 
 ```
 -legacy    Expected Values: True = true, t; false = false, f. (Not case sensitive, accepts all Golang Bool values.)
 ```
@@ -162,11 +196,12 @@ BitSprite is a quick and dirty approach to 'art', which allows the u
 This is usually a problem with passing bad color values to any of the color flags.  Please ensure it is a valid Hex Code and begins with #.
 
 #### When I produce a new sprite sheet, it's the wrong shape/completely transparent!
-This problem usually indicates that either you are not using the correct colors in the template file.  Ensure that they are as indicated in the pixel legend at the beginning of the readme.    
+This problem usually indicates that you are not using the correct colors in the template file.  Ensure that they are as indicated in the pixel legend at the beginning of the readme.    
 
 ### Further Reading
 http://web.archive.org/web/20080228054405/http://www.davebollinger.com/works/pixelrobots/
--This project is inspired by this blog post, which I think is a very interesting dive into generated art and some nifty things you can do with it.
+
+This project is inspired by this blog post, which I think is a very interesting dive into generated art and some nifty things you can do with it.
 
 ### Todos
 Beyond further futzing with colors and how to define them, I think I've cleared the low hanging fruit.  That being said, please feel free to add issues or pull requests,I would love to get input on how to make even more interesting generative art or less cluttered Go code.  

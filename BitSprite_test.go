@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"image"
 	"image/png"
 	"os"
@@ -11,34 +12,94 @@ import (
 //We're going to compare with fresh images with ones previously prepared.  One annoying thing
 //is that flags appear to persist between test functions, so there are redundant Args.
 func TestDefault(t *testing.T) {
+	fmt.Printf("TestDefault\n")
 	gotFileName := "GenerationDirectory/Triangle/TriangleSpriteSheet.png"
 	wantFileName := "testResources/TriangleSSVanilla.png"
 	testArgs := []string{"cmd", "-template=triangle"}
 	Compare(t, gotFileName, wantFileName, testArgs)
 }
 
+func TestIndividuals(t *testing.T) {
+	fmt.Printf("TestIndividuals\n")
+	gotFileName := "GenerationDirectory/Triangle/Individuals/127.png"
+	wantFileName := "testResources/127Test.png"
+	testArgs := []string{"cmd", "-template=triangle", "-individuals=t"}
+	Compare(t, gotFileName, wantFileName, testArgs)
+}
+
 func TestOddFold(t *testing.T) {
+	fmt.Printf("TestOddFold\n")
 	gotFileName := "GenerationDirectory/Triangle/TriangleSpriteSheet.png"
 	wantFileName := "testResources/TriangleSSOdd.png"
-	testArgs := []string{"cmd", "-template=triangle", "-fold=odd"}
+	testArgs := []string{"cmd", "-template=triangle", "-fold=odd", "-individuals=f"}
 	Compare(t, gotFileName, wantFileName, testArgs)
 }
 
 func TestEvenFold(t *testing.T) {
+	fmt.Printf("TestEvenFold\n")
 	gotFileName := "GenerationDirectory/Triangle/TriangleSpriteSheet.png"
 	wantFileName := "testResources/TriangleSSEven.png"
 	testArgs := []string{"cmd", "-template=triangle", "-fold=even"}
 	Compare(t, gotFileName, wantFileName, testArgs)
 }
 
+func TestEvenVert(t *testing.T) {
+	fmt.Printf("TestEvenVert\n")
+	gotFileName := "GenerationDirectory/Triangle/TriangleSpriteSheet.png"
+	wantFileName := "testResources/TriangleSSVE.png"
+	testArgs := []string{"cmd", "-template=triangle", "-fold=", "-vertfold=even"}
+	Compare(t, gotFileName, wantFileName, testArgs)
+}
+
+func TestOddVert(t *testing.T) {
+	fmt.Printf("TestOddVert\n")
+	gotFileName := "GenerationDirectory/Triangle/TriangleSpriteSheet.png"
+	wantFileName := "testResources/TriangleSSVO.png"
+	testArgs := []string{"cmd", "-template=triangle", "-vertfold=odd"}
+	Compare(t, gotFileName, wantFileName, testArgs)
+}
+
+func TestEvenFolds(t *testing.T) {
+	fmt.Printf("TestEvenFolds\n")
+	gotFileName := "GenerationDirectory/Triangle/TriangleSpriteSheet.png"
+	wantFileName := "testResources/TriangleSSFEVE.png"
+	testArgs := []string{"cmd", "-template=triangle", "-fold=even", "-vertfold=even"}
+	Compare(t, gotFileName, wantFileName, testArgs)
+}
+
+func TestOddFolds(t *testing.T) {
+	fmt.Printf("TestOddFolds\n")
+	gotFileName := "GenerationDirectory/Triangle/TriangleSpriteSheet.png"
+	wantFileName := "testResources/TriangleSSFOVO.png"
+	testArgs := []string{"cmd", "-template=triangle", "-fold=odd", "-vertfold=odd"}
+	Compare(t, gotFileName, wantFileName, testArgs)
+}
+
+func TestOddFoldEvenVert(t *testing.T) {
+	fmt.Printf("TestOddFoldEvenVert\n")
+	gotFileName := "GenerationDirectory/Triangle/TriangleSpriteSheet.png"
+	wantFileName := "testResources/TriangleSSFOVE.png"
+	testArgs := []string{"cmd", "-template=triangle", "-fold=odd", "-vertfold=even"}
+	Compare(t, gotFileName, wantFileName, testArgs)
+}
+
+func TestEvenFoldOddVert(t *testing.T) {
+	fmt.Printf("TestEvenFoldOddVert\n")
+	gotFileName := "GenerationDirectory/Triangle/TriangleSpriteSheet.png"
+	wantFileName := "testResources/TriangleSSFEVO.png"
+	testArgs := []string{"cmd", "-template=triangle", "-fold=even", "-vertfold=odd"}
+	Compare(t, gotFileName, wantFileName, testArgs)
+}
 func TestScale(t *testing.T) {
+	fmt.Printf("TestScale\n")
 	gotFileName := "GenerationDirectory/Triangle/TriangleSpriteSheet.png"
 	wantFileName := "testResources/TriangleSSScale.png"
-	testArgs := []string{"cmd", "-template=triangle", "-upscale=4", "-fold=none"}
+	testArgs := []string{"cmd", "-template=triangle", "-upscale=4", "-fold=", "-vertfold="}
 	Compare(t, gotFileName, wantFileName, testArgs)
 }
 
 func TestColor(t *testing.T) {
+	fmt.Printf("TestColor\n")
 	gotFileName := "GenerationDirectory/Triangle/TriangleSpriteSheet.png"
 	wantFileName := "testResources/TriangleSSRed.png"
 	testArgs := []string{"cmd", "-template=triangle", "-color=#ff0000", "-upscale=1"}
@@ -46,6 +107,7 @@ func TestColor(t *testing.T) {
 }
 
 func TestColorsBA(t *testing.T) {
+	fmt.Printf("TestColorsBA\n")
 	gotFileName := "GenerationDirectory/Triangle/TriangleSpriteSheet.png"
 	wantFileName := "testResources/TriangleSSBA.png"
 	testArgs := []string{"cmd", "-template=triangle", "-color=#ff0000", "-accent=#00ff00"}
@@ -53,6 +115,7 @@ func TestColorsBA(t *testing.T) {
 }
 
 func TestColorsBF(t *testing.T) {
+	fmt.Printf("TestColorsBF\n")
 	gotFileName := "GenerationDirectory/Triangle/TriangleSpriteSheet.png"
 	wantFileName := "testResources/TriangleSSBF.png"
 	testArgs := []string{"cmd", "-template=triangle", "-color=#ff0000", "-accent=", "-fill=#0000ff"}
@@ -60,6 +123,7 @@ func TestColorsBF(t *testing.T) {
 }
 
 func TestColorsFA(t *testing.T) {
+	fmt.Printf("TestColorsFA\n")
 	gotFileName := "GenerationDirectory/Triangle/TriangleSpriteSheet.png"
 	wantFileName := "testResources/TriangleSSFA.png"
 	testArgs := []string{"cmd", "-template=triangle", "-color=", "-accent=#00ff00", "-fill=#0000ff"}
@@ -67,6 +131,7 @@ func TestColorsFA(t *testing.T) {
 }
 
 func TestColorsBAF(t *testing.T) {
+	fmt.Printf("TestColorsBAF\n")
 	gotFileName := "GenerationDirectory/Triangle/TriangleSpriteSheet.png"
 	wantFileName := "testResources/TriangleSSBAF.png"
 	testArgs := []string{"cmd", "-template=triangle", "-color=#ff0000", "-accent=#00ff00", "-fill=#0000ff"}
@@ -74,6 +139,7 @@ func TestColorsBAF(t *testing.T) {
 }
 
 func TestBlends(t *testing.T) {
+	fmt.Printf("TestBlends\n")
 	gotFileName := "GenerationDirectory/Triangle/TriangleSpriteSheet.png"
 	wantFileName := "testResources/TriangleSSBlend.png"
 	testArgs := []string{"cmd", "-template=triangle", "-color=#ff0000:#00ff00", "-accent=#00ff00:#0000ff", "-fill=#0000ff:#ff0000"}
@@ -81,6 +147,7 @@ func TestBlends(t *testing.T) {
 }
 
 func TestColorOutline(t *testing.T) {
+	fmt.Printf("TestColorOutline\n")
 	gotFileName := "GenerationDirectory/Triangle/TriangleSpriteSheet.png"
 	wantFileName := "testResources/TriangleSSOutRed.png"
 	testArgs := []string{"cmd", "-template=triangle", "-color=", "-accent=", "-fill=", "-outcolor=#ff0000"}
@@ -88,6 +155,7 @@ func TestColorOutline(t *testing.T) {
 }
 
 func TestOutlineBool(t *testing.T) {
+	fmt.Printf("TestOutlineBool\n")
 	gotFileName := "GenerationDirectory/Triangle/TriangleSpriteSheet.png"
 	wantFileName := "testResources/TriangleSSOutFalse.png"
 	testArgs := []string{"cmd", "-template=triangle", "-outline=f", "-outcolor="}
@@ -95,6 +163,7 @@ func TestOutlineBool(t *testing.T) {
 }
 
 func TestBackgroundColor(t *testing.T) {
+	fmt.Printf("TestBackgroundColor\n")
 	gotFileName := "GenerationDirectory/Triangle/TriangleSpriteSheet.png"
 	wantFileName := "testResources/TriangleSSBack.png"
 	testArgs := []string{"cmd", "-template=triangle", "-outline=t", "-background=#ff00ff"}
@@ -102,6 +171,7 @@ func TestBackgroundColor(t *testing.T) {
 }
 
 func TestLegacy(t *testing.T) {
+	fmt.Printf("TestLegacy\n")
 	gotFileName := "/GenerationDirectory/Triangle/TriangleSpriteSheet.png"
 	wantFileName := "/testResources/TriangleSSLegacy.png"
 	testArgs := []string{"cmd", "-template=triangle", "-background=", "-legacy=t"}
@@ -109,6 +179,7 @@ func TestLegacy(t *testing.T) {
 }
 
 func TestFace(t *testing.T) {
+	fmt.Printf("TestFace\n")
 	gotFileName := "/GenerationDirectory/face/faceSpriteSheet.png"
 	wantFileName := "/testResources/faceSS.png"
 	testArgs := []string{"cmd", "-template=face", "-legacy=f", "-color=#ff0000", "-accent=#00ff00", "-fill=#0000ff", "-fold=odd"}
@@ -119,6 +190,7 @@ func TestFace(t *testing.T) {
 //use the example face.png template to have that included.  Do this test last otherwise you need to reset
 //all the flags set here.
 func TestInputSanitizers(t *testing.T) {
+	fmt.Printf("TestInputSanitizers\n")
 	gotFileName := "/GenerationDirectory/BadInput/BadInputSpriteSheet.png"
 	wantFileName := "/testResources/faceSSbadinput.png"
 	testArgs := []string{"cmd", "-template=face", "-legacy=f", "-color=badInput", "-accent=BadInput", "-fill=BadInput", "-sheetwidth=1000", "-upscale=0", "-outname=BadInput", "-fold=none"}
@@ -132,8 +204,15 @@ func BenchmarkDefault(b *testing.B) {
 	}
 }
 
+func BenchmarkIndividuals(b *testing.B) {
+	os.Args = []string{"cmd", "-template=triangle", "individuals=t"}
+	for i := 0; i < b.N; i++ {
+		main()
+	}
+}
+
 func BenchmarkTenScale(b *testing.B) {
-	os.Args = []string{"cmd", "-template=triangle", "-upscale=10"}
+	os.Args = []string{"cmd", "-template=triangle", "-upscale=10", "individuals=f"}
 	for i := 0; i < b.N; i++ {
 		main()
 	}

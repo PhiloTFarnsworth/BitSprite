@@ -10,6 +10,8 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"runtime/pprof"
+	"runtime/trace"
 	"strconv"
 	"strings"
 	"sync"
@@ -41,6 +43,7 @@ var HGray = color.RGBA{170, 170, 170, 255}
 //Flags.  Trying to be a bit more terse than the readme.  out- names are probably too abundant, and legacy is not ideal.
 var templateString = flag.String("template", "", "Choose template to render, template must be in Templates folder.")
 var foldPref = flag.String("fold", "", "Sets fold preference for template if desired, use even and odd, all other values default to no fold. (e, even=Even; o, odd=Odd)")
+var vertFoldPref = flag.String("vertfold", "", "Sets fold preference accross bottom of image, use even and odd, all other values default to no fold. (e, even=Even; o, odd=Odd)")
 var colorPref = flag.String("color", "", "Sets color of activated bit pixels, use Hex or Hex:Hex (#FFFFFF or #000000:#FFFFFF).")
 var accentPref = flag.String("accent", "", "Sets the color of the accent pixels, use Hex or Hex:Hex (#FFFFFF or #000000:#FFFFFF).")
 var fillPref = flag.String("fill", "", "Sets the color of the fill pixels,  use Hex or Hex:Hex (#FFFFFF or #000000:#FFFFFF).")
@@ -51,36 +54,34 @@ var upscalePref = flag.Int("upscale", 1, "Increases the scale of the template's 
 var compositePref = flag.Int("sheetwidth", 16, "Sets width of output sprite sheet, use a factor of 256.")
 var legacyColors = flag.Bool("legacy", false, "Colors are based on a composite linear gradient of the YCbCr at .5 lumia if true, use Golang Bool values.")
 var outputNamePref = flag.String("outname", "", "Sets the output files to be placed in a generation directory named after the string provided.")
+var individualsPref = flag.Bool("individuals", false, "Creates a directory of individual .png files for each image on the spritesheet")
 
-//var cpuprofile = flag.String("cpuprofile", "", "Write cpu profile to file")
+var cpuprofile = flag.String("cpuprofile", "", "Write cpu profile to file")
 
 func main() {
 	//Profiling
 	flag.Parse()
-	// if *cpuprofile != "" {
-	// 	f, err := os.Create(*cpuprofile)
-	// 	if err != nil {
-	// 		log.Fatal(err)
-	// 	}
-	// 	pprof.StartCPUProfile(f)
-	// 	defer pprof.StopCPUProfile()
-	// }
+	if *cpuprofile != "" {
+		f, err := os.Create(*cpuprofile)
+		if err != nil {
+			log.Fatal(err)
+		}
+		pprof.StartCPUProfile(f)
+		defer pprof.StopCPUProfile()
+	}
 
 	//Trace
-	// f, err := os.Create("trace.out")
-	// if err != nil {
-	// 	panic(err)
-	// }
-	// defer f.Close()
+	f, err := os.Create("trace.out")
+	if err != nil {
+		panic(err)
+	}
+	defer f.Close()
 
-	// err = trace.Start(f)
-	// if err != nil {
-	// 	panic(err)
-	// }
-	// defer trace.Stop()
-
-	//Now the program can begin
-	fmt.Print("BitSprite: Making 256 versions of 1 thing since 2021\n")
+	err = trace.Start(f)
+	if err != nil {
+		panic(err)
+	}
+	defer trace.Stop()
 
 	//Grab the flag values
 	templateName := *templateString
@@ -90,6 +91,8 @@ func main() {
 	upScale := *upscalePref
 	compositeWidth := *compositePref
 	outputName := *outputNamePref
+	individuals := *individualsPref
+	vertFold := *vertFoldPref
 
 	//We'll preemptively break down our colors strings as though they were blend values.  We'll use our
 	//enumerated Pixel values to put them on a temporary map.  Sorta chunky, but it's readable enough.
@@ -138,7 +141,6 @@ func main() {
 	if upScale < 1 {
 		upScale = 1
 	}
-
 	//Open the templateFile
 	currentDir, err := filepath.Abs("")
 	check(err)
@@ -158,7 +160,9 @@ func main() {
 	PlacementDirectory := filepath.Join(currentDir, dirString)
 	mayCreateFolder(PlacementDirectory)
 	individualSpriteDir := filepath.Join(currentDir, dirString+"/Individuals")
-	mayCreateFolder(individualSpriteDir)
+	if individuals {
+		mayCreateFolder(individualSpriteDir)
+	}
 
 	//Grab our template pixels and the template config
 	templateStream, err := png.Decode(templateFile)
@@ -169,18 +173,30 @@ func main() {
 
 	//Use folding to determine the dimensions of the output images.
 	var canvasWidth int
-	var foldAt int
+	var canvasHeight int
+	var foldY int
+	var foldX int
 	if strings.EqualFold(folding, "even") || strings.EqualFold(folding, "e") {
 		canvasWidth = (templateConfig.Width * 2)
-		foldAt = (canvasWidth / 2)
+		foldY = (canvasWidth / 2)
 	} else if strings.EqualFold(folding, "odd") || strings.EqualFold(folding, "o") {
 		canvasWidth = ((templateConfig.Width * 2) - 1)
-		foldAt = ((canvasWidth / 2) + 1)
+		foldY = ((canvasWidth / 2) + 1)
 	} else {
 		canvasWidth = templateConfig.Width
-		foldAt = canvasWidth
+		foldY = canvasWidth
 	}
-	canvasHeight := templateConfig.Height
+
+	if strings.EqualFold(vertFold, "even") || strings.EqualFold(vertFold, "e") {
+		canvasHeight = templateConfig.Height * 2
+		foldX = (canvasHeight / 2)
+	} else if strings.EqualFold(vertFold, "odd") || strings.EqualFold(vertFold, "o") {
+		canvasHeight = (templateConfig.Height * 2) - 1
+		foldX = (canvasHeight / 2) + 1
+	} else {
+		canvasHeight = templateConfig.Height
+		foldX = canvasHeight
+	}
 
 	//Translate the image into a simple array.
 	var templateArray []Pixel
@@ -258,12 +274,16 @@ func main() {
 					}
 				}
 			}
+			var outfile *os.File
+			var canvas *image.RGBA
+			if individuals {
+				// With the template adjusted, we create the output file for each image.
+				newFile := individualSpriteDir + "/" + strconv.Itoa(i) + ".png"
+				outfile, err = os.Create(newFile)
+				check(err)
+				canvas = image.NewRGBA(image.Rectangle{image.Point{0, 0}, image.Point{canvasWidth * upScale, canvasHeight * upScale}})
 
-			// With the template adjusted, we create the output file for each image.
-			newFile := individualSpriteDir + "/" + strconv.Itoa(i) + ".png"
-			outfile, err := os.Create(newFile)
-			check(err)
-			canvas := image.NewRGBA(image.Rectangle{image.Point{0, 0}, image.Point{canvasWidth * upScale, canvasHeight * upScale}})
+			}
 
 			//let's grab the base color for our image
 			finalColors := make(map[Pixel]color.Color)
@@ -290,23 +310,35 @@ func main() {
 				for x := 0; x < canvasWidth; x++ {
 					//We want to start by converting our coordinate into an index position.  When we fold,
 					//we put our index at the mirrored position.
-					if x < foldAt {
-						pixelIndex = x + (y * templateConfig.Width)
+					if x < foldY {
+						if y < foldX {
+							pixelIndex = x + (y * templateConfig.Width)
+						} else {
+							pixelIndex = x + ((canvasHeight - y - 1) * templateConfig.Width)
+						}
 					} else {
-						pixelIndex = (canvasWidth - x) + (y * templateConfig.Width) - 1
+						if y < foldX {
+							pixelIndex = (canvasWidth - x) + (y * templateConfig.Width) - 1
+						} else {
+							pixelIndex = (canvasWidth - x) + ((canvasHeight - y - 1) * templateConfig.Width) - 1
+						}
 					}
 					//A little messy, but we account for upScale here.
 					for j := 0; j < upScale; j++ {
 						for k := 0; k < upScale; k++ {
-							canvas.Set((x*upScale)+j, (y*upScale)+k, finalColors[newImage[pixelIndex]])
+							if individuals {
+								canvas.Set((x*upScale)+j, (y*upScale)+k, finalColors[newImage[pixelIndex]])
+							}
 							composite.Set((x*upScale)+j+canvasWidth*upScale*(i%compositeWidth), (y*upScale)+k+canvasHeight*upScale*(i/compositeWidth), finalColors[newImage[pixelIndex]])
 						}
 					}
 				}
 			}
 			//After building the sprite, we encode, then close the individual sprite file.
-			png.Encode(outfile, canvas)
-			outfile.Close()
+			if individuals {
+				png.Encode(outfile, canvas)
+				outfile.Close()
+			}
 		}(i)
 	}
 	wg.Wait()
