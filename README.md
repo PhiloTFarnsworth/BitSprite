@@ -187,7 +187,7 @@ Sheetwidth controls the number of columns in an output Sprite Sheet. 
 Outname controls the naming of the output directory and sprite sheet 
 ```
 -individuals    Expected Values: True = true, t; false = false, f. (Not case sensitive, accepts all Golang Bool values.
-``` 
+```
 Indivduals controls whether BitSprite creates a directory with individual .png files of all the images that constitute the spritesheet.  Defaults
 to false. 
 ```
