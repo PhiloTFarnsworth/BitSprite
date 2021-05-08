@@ -27,8 +27,17 @@ To create a template, open your favorite image editor.  In this exam
 
 Any deviation from these specific colors on a template will result in the offending color being treated as background.  So if your output is entirely transparent, check that your pixels are correctly colored on the template.
 
-'Bit' pixels are how our generator creates the variety between images, as these pixels switch between being active and displaying a set color, or inactive and becoming an outline pixel.  Accent and fill pixels are static, allowing the user to set pixels that are always active.  Outline pixels are generated any time an active (colored) pixel is bordered by a background pixel, and by default are colored black.  They can also function as another static pixel if explicitly included in the template, though they will not generate borders around themselves like bit/accent/fill pixels do.  Background pixels are default transparent.  
+'Bit' pixels are how our generator creates the variety between images, as these pixels switch between being active and displaying a set color, or inactive and becoming an outline pixel.  While BitSprite expects 8 bit pixels in a template, you can do less, which results in fewer unique combinations
+on the final sprite sheet.  You can also include more than 8 bit pixels in a template, in which case, the bit pattern will repeat, with 9th pixel getting the value
+of the first assigned pixel, and so on until it repeats again.  
 
+Accent and fill pixels are static, allowing the user to set pixels that are always active.  
+
+Outline pixels are generated any time an active (colored) pixel is bordered by a background pixel, and by default are colored black.  They can also function as another static pixel if explicitly included in the template, though they will not generate borders around themselves like bit/accent/fill pixels do. 
+
+Background pixels are default transparent.  
+
+#### Back To The Template
 Let's look at what a compliant template may look like:
 
 ![MS Paint Window with an open template file](https://github.com/PhiloTFarnsworth/BitSprite/blob/main/docs/ExampleTemplateWorkflow.png)
