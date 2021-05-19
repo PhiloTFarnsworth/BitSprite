@@ -28,7 +28,7 @@ jobs:
       run: go test -v ./...
 
     - name: Flower Versioning
-      run: bitsprite.exe -template=flowerdelimited -fold=o -legacy=t -upscale=4 -outname=docs -individuals=t
+      run: go run bitsprite.go -template=flowerdelimited -fold=o -legacy=t -upscale=4 -outname=docs -individuals=t
 
     - name: Commit files
       run: |

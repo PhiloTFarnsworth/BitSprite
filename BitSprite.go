@@ -158,20 +158,31 @@ func main() {
 	check(err)
 	defer templateFile.Close()
 
-	if outputName != "" {
-		templateName = outputName
-	}
-
+	var dirString string
+	var PlacementDirectory string
+	var individualSpriteDir string
 	//Prepare the generation directories for the file here.
-
-	generationDirectory := filepath.Join(currentDir, "/GenerationDirectory")
-	mayCreateFolder(generationDirectory)
-	dirString := "GenerationDirectory/" + templateName
-	PlacementDirectory := filepath.Join(currentDir, dirString)
-	mayCreateFolder(PlacementDirectory)
-	individualSpriteDir := filepath.Join(currentDir, dirString+"/Individuals")
-	if individuals {
-		mayCreateFolder(individualSpriteDir)
+	if strings.EqualFold(outputName, "docs") {
+		dirString = "docs/example"
+		PlacementDirectory = filepath.Join(currentDir, dirString)
+		mayCreateFolder(PlacementDirectory)
+		individualSpriteDir = filepath.Join(currentDir, dirString+"/Individuals")
+		if individuals {
+			mayCreateFolder(individualSpriteDir)
+		}
+	} else {
+		if outputName != "" {
+			templateName = outputName
+		}
+		generationDirectory := filepath.Join(currentDir, "/GenerationDirectory")
+		mayCreateFolder(generationDirectory)
+		dirString = "GenerationDirectory/" + templateName
+		PlacementDirectory = filepath.Join(currentDir, dirString)
+		mayCreateFolder(PlacementDirectory)
+		individualSpriteDir = filepath.Join(currentDir, dirString+"/Individuals")
+		if individuals {
+			mayCreateFolder(individualSpriteDir)
+		}
 	}
 
 	//Grab our template pixels and the template config

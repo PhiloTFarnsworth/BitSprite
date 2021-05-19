@@ -229,7 +229,7 @@ Sheetwidth controls the number of columns in an output Sprite Sheet. 
 ```
 -outname    Expected Values: Any string that doesn't anger your OS.
 ```
-Outname controls the naming of the output directory and sprite sheet 
+Outname controls the naming of the output directory and sprite sheet.  'docs' is reserved and will output to docs/example.
 ```
 -individuals    Expected Values: True = true, t; false = false, f. (Not case sensitive, accepts all Golang Bool values.
 ```
