@@ -1,8 +1,10 @@
 .vscode
 *.Prof
 *.out
-GenerationDirectory
+GenerationDirectory/*
+!GenerationDirectory/docs
 templates/*png
 !templates/Triangle.png
 !templates/Face.png
+!templates/Flower*.png
 Compositer

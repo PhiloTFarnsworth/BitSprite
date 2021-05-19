@@ -178,11 +178,27 @@ func TestLegacy(t *testing.T) {
 	Compare(t, gotFileName, wantFileName, testArgs)
 }
 
+func TestUnlimitedComposite(t *testing.T) {
+	fmt.Printf("TestUnlimitedComposite\n")
+	gotFileName := "/GenerationDirectory/Flower/FlowerSpriteSheet.png"
+	wantFileName := "/testResources/VanillaFlower.png"
+	testArgs := []string{"cmd", "-template=flower", "-fold=o", "-legacy=t"}
+	Compare(t, gotFileName, wantFileName, testArgs)
+}
+
+func TestDelimitedComposite(t *testing.T) {
+	fmt.Printf("TestDelimitedComposite\n")
+	gotFileName := "/GenerationDirectory/Flower/FlowerSpriteSheet.png"
+	wantFileName := "/testResources/DelimitedFlower.png"
+	testArgs := []string{"cmd", "-template=flowerDelimited", "-fold=o", "-legacy=t", "-outname=Flower", "-randseed=f"}
+	Compare(t, gotFileName, wantFileName, testArgs)
+}
+
 func TestFace(t *testing.T) {
 	fmt.Printf("TestFace\n")
 	gotFileName := "/GenerationDirectory/face/faceSpriteSheet.png"
 	wantFileName := "/testResources/faceSS.png"
-	testArgs := []string{"cmd", "-template=face", "-legacy=f", "-color=#ff0000", "-accent=#00ff00", "-fill=#0000ff", "-fold=odd"}
+	testArgs := []string{"cmd", "-template=face", "-legacy=f", "-color=#ff0000", "-accent=#00ff00", "-fill=#0000ff", "-fold=odd", "-outname=", "randseed=t"}
 	Compare(t, gotFileName, wantFileName, testArgs)
 }
 

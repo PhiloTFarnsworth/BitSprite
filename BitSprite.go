@@ -8,13 +8,13 @@ import (
 	"image/color"
 	"image/png"
 	"log"
+	"math/rand"
 	"os"
 	"path/filepath"
-	"runtime/pprof"
-	"runtime/trace"
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/muesli/gamut"
 )
@@ -28,6 +28,7 @@ const (
 	Accent
 	Fill
 	Outline
+	Delimiter
 	PixelsDefined //Add any new tracked pixels above this.
 )
 
@@ -35,6 +36,7 @@ var Black = color.RGBA{0, 0, 0, 255}
 var Red = color.RGBA{255, 0, 0, 255}
 var Green = color.RGBA{0, 255, 0, 255}
 var Blue = color.RGBA{0, 0, 255, 255}
+var Magenta = color.RGBA{255, 0, 255, 255}
 var White = color.RGBA{255, 255, 255, 255}
 var Transp = color.RGBA{0, 0, 0, 0}
 var LGray = color.RGBA{85, 85, 85, 255}
@@ -55,34 +57,42 @@ var compositePref = flag.Int("sheetwidth", 16, "Sets width of output sprite shee
 var legacyColors = flag.Bool("legacy", false, "Colors are based on a composite linear gradient of the YCbCr at .5 lumia if true, use Golang Bool values.")
 var outputNamePref = flag.String("outname", "", "Sets the output files to be placed in a generation directory named after the string provided.")
 var individualsPref = flag.Bool("individuals", false, "Creates a directory of individual .png files for each image on the spritesheet")
+var randSeedPref = flag.Bool("randseed", true, "Toggles random seed, used for debug/testing.")
 
-var cpuprofile = flag.String("cpuprofile", "", "Write cpu profile to file")
+//var cpuprofile = flag.String("cpuprofile", "", "Write cpu profile to file")
 
 func main() {
-	//Profiling
+	// //Profiling
 	flag.Parse()
-	if *cpuprofile != "" {
-		f, err := os.Create(*cpuprofile)
-		if err != nil {
-			log.Fatal(err)
-		}
-		pprof.StartCPUProfile(f)
-		defer pprof.StopCPUProfile()
-	}
+	// if *cpuprofile != "" {
+	// 	f, err := os.Create(*cpuprofile)
+	// 	if err != nil {
+	// 		log.Fatal(err)
+	// 	}
+	// 	pprof.StartCPUProfile(f)
+	// 	defer pprof.StopCPUProfile()
+	// }
 
-	//Trace
-	f, err := os.Create("trace.out")
-	if err != nil {
-		panic(err)
-	}
-	defer f.Close()
+	// //Trace
+	// f, err := os.Create("trace.out")
+	// if err != nil {
+	// 	panic(err)
+	// }
+	// defer f.Close()
 
-	err = trace.Start(f)
-	if err != nil {
-		panic(err)
-	}
-	defer trace.Stop()
+	// err = trace.Start(f)
+	// if err != nil {
+	// 	panic(err)
+	// }
+	// defer trace.Stop()
 
+	//rand seed
+	randomSeed := *randSeedPref
+	if randomSeed {
+		rand.Seed(time.Now().UnixNano())
+	} else {
+		rand.Seed(1)
+	}
 	//Grab the flag values
 	templateName := *templateString
 	folding := *foldPref
@@ -200,6 +210,7 @@ func main() {
 
 	//Translate the image into a simple array.
 	var templateArray []Pixel
+	var delimiters []int //indexes where we want to change our bit array
 	for y := 0; y < templateConfig.Height; y++ {
 		for x := 0; x < templateConfig.Width; x++ {
 			//Convert pixel model to RGBA.
@@ -214,12 +225,20 @@ func main() {
 				templateArray = append(templateArray, Fill)
 			case Black:
 				templateArray = append(templateArray, Bit)
+			case Magenta:
+				templateArray = append(templateArray, Background)
+				delimiters = append(delimiters, x+y*templateConfig.Width)
 			default:
 				templateArray = append(templateArray, Background)
 			}
 		}
 	}
 
+	//Generate number list for delimited segments of the input image.
+	var randomArrays [][]int
+	for i := 0; i < len(delimiters); i++ {
+		randomArrays = append(randomArrays, rand.Perm(256))
+	}
 	//composite is our sprite sheet, and we'll draw it up simultaneously with our individual images.
 	composite := image.NewRGBA(image.Rectangle{image.Point{0, 0}, image.Point{canvasWidth * upScale * compositeWidth, canvasHeight * upScale * 256 / compositeWidth}})
 
@@ -235,11 +254,13 @@ func main() {
 			//newImage will hold a modified template array, based on how we read our bit pixels and our outline settings.
 			var newImage []Pixel
 			bitsRead := 0
+			resolutionNumber := i
+			delimitersRead := 0
 			for j := 0; j < len(templateArray); j++ {
 				if templateArray[j] == Bit {
 					//We take our increment, shift it by the bitsRead, finally checking whether it is even or odd.  This way 0 = all inactive,
 					//255 = all active.
-					if (i>>(bitsRead%8))&1 == 0 {
+					if (resolutionNumber>>(bitsRead%8))&1 == 0 {
 						newImage = append(newImage, Outline)
 					} else {
 						newImage = append(newImage, Bit)
@@ -247,6 +268,13 @@ func main() {
 					bitsRead++
 				} else {
 					newImage = append(newImage, templateArray[j])
+				}
+				if delimitersRead < len(delimiters) {
+					if j >= delimiters[delimitersRead] {
+						bitsRead = 0
+						resolutionNumber = randomArrays[delimitersRead][i]
+						delimitersRead++
+					}
 				}
 			}
 			//checks neighbors of active, colored pixels.  If the neighboring pixel is a background, replace it with an outline
@@ -282,30 +310,37 @@ func main() {
 				outfile, err = os.Create(newFile)
 				check(err)
 				canvas = image.NewRGBA(image.Rectangle{image.Point{0, 0}, image.Point{canvasWidth * upScale, canvasHeight * upScale}})
-
 			}
 
 			//let's grab the base color for our image
-			finalColors := make(map[Pixel]color.Color)
-			if !legacy {
-				for key, val := range chosenColors {
-					if len(val) > 1 {
-						finalColors[key] = chosenColors[key][i]
-					} else {
-						finalColors[key] = chosenColors[key][0]
-					}
+			var finalColors [PixelsDefined][]color.Color
+			for j := 0; j < len(delimiters)+1; j++ {
+				if j == 0 {
+					resolutionNumber = i
+				} else {
+					resolutionNumber = randomArrays[j-1][i]
 				}
-			} else {
-				//legacy ycbcr gradients
-				finalColors[Bit] = color.YCbCr{128, uint8((i + 128) % 256), uint8(i % 256)}
-				finalColors[Accent] = color.YCbCr{64, uint8((i + 128) % 256), uint8(i % 256)}
-				finalColors[Fill] = color.YCbCr{192, uint8((i + 128) % 256), uint8(i % 256)}
-				finalColors[Background] = Transp
-				finalColors[Outline] = Black
+				if !legacy {
+					for key, val := range chosenColors {
+						if len(val) > 1 {
+							finalColors[key] = append(finalColors[key], chosenColors[key][resolutionNumber])
+						} else {
+							finalColors[key] = append(finalColors[key], chosenColors[key][0])
+						}
+					}
+				} else {
+					//legacy ycbcr gradients
+					finalColors[Bit] = append(finalColors[Bit], color.YCbCr{128, uint8((resolutionNumber + 128) % 256), uint8(resolutionNumber % 256)})
+					finalColors[Accent] = append(finalColors[Accent], color.YCbCr{64, uint8((resolutionNumber + 128) % 256), uint8(resolutionNumber % 256)})
+					finalColors[Fill] = append(finalColors[Fill], color.YCbCr{192, uint8((resolutionNumber + 128) % 256), uint8(resolutionNumber % 256)})
+					finalColors[Background] = append(finalColors[Background], Transp)
+					finalColors[Outline] = append(finalColors[Outline], Black)
+				}
 			}
 
 			//Finally, with colors and a template secured, we can write to our individual canvas and collective composite.
 			var pixelIndex int
+			delimitersRead = 0
 			for y := 0; y < canvasHeight; y++ {
 				for x := 0; x < canvasWidth; x++ {
 					//We want to start by converting our coordinate into an index position.  When we fold,
@@ -327,9 +362,17 @@ func main() {
 					for j := 0; j < upScale; j++ {
 						for k := 0; k < upScale; k++ {
 							if individuals {
-								canvas.Set((x*upScale)+j, (y*upScale)+k, finalColors[newImage[pixelIndex]])
+								canvas.Set((x*upScale)+j, (y*upScale)+k, finalColors[newImage[pixelIndex]][delimitersRead])
 							}
-							composite.Set((x*upScale)+j+canvasWidth*upScale*(i%compositeWidth), (y*upScale)+k+canvasHeight*upScale*(i/compositeWidth), finalColors[newImage[pixelIndex]])
+							composite.Set((x*upScale)+j+canvasWidth*upScale*(i%compositeWidth),
+								(y*upScale)+k+canvasHeight*upScale*(i/compositeWidth),
+								finalColors[newImage[pixelIndex]][delimitersRead])
+						}
+					}
+					//delimiter check
+					if delimitersRead < len(delimiters)-1 {
+						if pixelIndex >= delimiters[delimitersRead] {
+							delimitersRead++
 						}
 					}
 				}

@@ -1,7 +1,9 @@
-![Triangles](https://github.com/PhiloTFarnsworth/BitSprite/blob/main/docs/TriangleHeader.png)
-
 # BitSprite
 ## A Free 8-Bit Sprite Generator.
+##### Flower Version:
+| | | | | | | | | | |
+|----|----|----|----|----|----|----|----|----|----|
+|![Flower 1](https://github.com/PhiloTFarnsworth/BitSprite/blob/main/GenerationDirectory/Docs/Individuals/0.png)|![Flower 2](https://github.com/PhiloTFarnsworth/BitSprite/blob/main/GenerationDirectory/Docs/Individuals/1.png)|![Flower 3](https://github.com/PhiloTFarnsworth/BitSprite/blob/main/GenerationDirectory/Docs/Individuals/2.png)|![Flower 4](https://github.com/PhiloTFarnsworth/BitSprite/blob/main/GenerationDirectory/Docs/Individuals/3.png)|![Flower 5](https://github.com/PhiloTFarnsworth/BitSprite/blob/main/GenerationDirectory/Docs/Individuals/4.png)|![Flower 6](https://github.com/PhiloTFarnsworth/BitSprite/blob/main/GenerationDirectory/Docs/Individuals/5.png)|![Flower 7](https://github.com/PhiloTFarnsworth/BitSprite/blob/main/GenerationDirectory/Docs/Individuals/6.png)|![Flower 8](https://github.com/PhiloTFarnsworth/BitSprite/blob/main/GenerationDirectory/Docs/Individuals/7.png)|![Flower 9](https://github.com/PhiloTFarnsworth/BitSprite/blob/main/GenerationDirectory/Docs/Individuals/8.png)|![Flower 10](https://github.com/PhiloTFarnsworth/BitSprite/blob/main/GenerationDirectory/Docs/Individuals/9.png)|
 
 ### What?
 BitSprite is a program that creates variants of an image across total sprite sheet of the resultant images.  By taking the index of the variant as it lays on the sprite sheet, Bitsprite uses that index number to activate or deactivate certain designated pixels based on its representation as a binary number. After downloading the package, or the .exe, the user can use the command prompt to run the program, using flags to control the results.  The user has several options to designate colors, as well as 'unfold' the template to create symmetrical images.
@@ -13,6 +15,7 @@ Download the package and place it in an easy to reach place.  You will need to r
 ![Flowers?](https://github.com/PhiloTFarnsworth/BitSprite/blob/main/docs/FlowersorSkullsHeader.png)
 
 ### Using BitSprite
+
 #### Creating a Template
 To create a template, open your favorite image editor.  In this example, we'll just use the venerable Microsoft Paint, but any editor should be fine, so long as you encode the template as a png.  Templates have a special color coding to determine how the pixels are read and later written.
 
@@ -24,6 +27,7 @@ To create a template, open your favorite image editor.  In this exam
 |Fill|Blue (RGB 0,0,255)|
 |Outline|Red (RGB 255,0,0)|
 |Background|White (RGB 255,255,255)|
+|Delimiter|Magenta (RGB 255,0,255)|
 
 Any deviation from these specific colors on a template will result in the offending color being treated as background.  So if your output is entirely transparent, check that your pixels are correctly colored on the template.
 
@@ -131,6 +135,47 @@ Now we can represent our little buddy across a variety of tones.  F
 It's a candy colored nightmare to be sure, but it can be useful when you're unsure what color you might want to base your sprites on. This is created by running across two gradients at .5 lumia on the YCbCr color scheme, which stands in for our activated bit pixels, while fills and accents are lighter and darker lumias of the same gradient.
 
 ![Robot heads](https://github.com/PhiloTFarnsworth/BitSprite/blob/main/docs/RobotsHeader.png)
+
+#### But isn't 8 pixels a little limiting?
+
+Yes, yes it is.  However, this limit is also a strength;  Let's consider creating a flower.  We could probably create a passable flower using a single template, but if we break down the flower into parts and then sew them together, we can create huge amount of diversity in a specific asset in a short time.  We can use BitSprite to preview what this would look like.
+
+![An example of 4 templates representing a flower, a stem, leaves and a base of plant](https://github.com/PhiloTFarnsworth/BitSprite/blob/main/docs/FlowerIntro.png)
+
+We can combine these into one template and run it through BitSprite.
+
+![The 4 templates combined together into a composite template, no delimiters](https://github.com/PhiloTFarnsworth/BitSprite/blob/main/docs/FlowerUnlimited.png)
+
+
+```
+    BitSprite.exe -template=flower -upscale=4 -fold=o -legacy=t
+```
+
+This results in something a little interesting, but something feels a little off:
+
+![the composite template from the previous image rendered, 256 "flowers"](https://github.com/PhiloTFarnsworth/BitSprite/blob/main/docs/FlowerUnlimitedOutput)
+
+Some are definitely more plant-like than the others, but this is only a single combination of 256^4, and it's rather unlikely if going to want 0th base image, 0th leaves image, 0th stem and 0th flower.  Instead, when using this in a game engine you might pick random numbers for all 4 images and put them together.  So what do we do to the template to return 256 samples?  
+
+![Enter the magenta delimiter pixel; the composite template now has pink delimiter pixels at the beginning of each image](https://github.com/PhiloTFarnsworth/BitSprite/blob/main/docs/FlowerDelimiter.png)
+
+First, we add our magenta 'delimiter' pixels to what would be the first pixel of each sub-template (reading rows from left to right).  Let's 
+run that command again
+
+
+```
+    BitSprite.exe -template=flowerdelimited -upscale=4 -fold=o -legacy=t
+```
+
+
+![Sprite Sheet with 256 randomized flowers, with all sub templates randomly rendered](https://github.com/PhiloTFarnsworth/BitSprite/blob/main/docs/FlowerDelimiterOutput.png)
+
+Now we have a cross sample of what we can expect from randomized rendering of individual parts.  Now this feature isn't very useful for production, but when you're prototyping a composite sprite, like the flower above, this can give you a good idea of whether your shapes work together.
+
+#### A Final Note
+You might be wondering, what if I'm not using templates with 8 'Bit' pixels?  You'll find the 'Bit' pattern repeats every 8 'Bit' pixels you have in your template.  There's no upper bound for 'Bit' pixels, but large images with more complexity generally don't look great.
+
+![Triangles](https://github.com/PhiloTFarnsworth/BitSprite/blob/main/docs/TriangleHeader.png)
 
 ### Flag Commands
 After creating the .PNG template and placing it in the Templates folder, the user can then use the command prompt, to create a sprite sheet, based on the following flags:
