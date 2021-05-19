@@ -1,9 +1,10 @@
 # BitSprite
 ## A Free 8-Bit Sprite Generator.
 ##### Flower Version:
-| | | | | | | | | | |
-|----|----|----|----|----|----|----|----|----|----|
-|![Flower 1](docs/Example/Individuals/0.png)|![Flower 2](docs/Example/Individuals/1.png)|![Flower 3](docs/Example/Individuals/2.png)|![Flower 4](docs/Example/Individuals/3.png)|![Flower 5](docs/Example/Individuals/4.png)|![Flower 6](docs/Example/Individuals/5.png)|![Flower 7](docs/Example/Individuals/6.png)|![Flower 8](docs/Example/Individuals/7.png)|![Flower 9](docs/Example/Individuals/8.png)|![Flower 10](docs/Example/Individuals/9.png)|
+| | | | | | | | | | | | |
+|----|----|----|----|----|----|----|----|----|----|----|----|
+|![Flower 1](docs/example/Individuals/0.png)|![Flower 2](docs/example/Individuals/1.png)|![Flower 3](docs/example/Individuals/2.png)|![Flower 4](docs/example/Individuals/3.png)|![Flower 5](docs/example/Individuals/4.png)|![Flower 6](docs/example/Individuals/5.png)|![Flower 7](docs/example/Individuals/6.png)|![Flower 8](docs/example/Individuals/7.png)|![Flower 9](docs/example/Individuals/8.png)|![Flower 10](docs/example/Individuals/9.png)|![Flower 11](docs/example/Individuals/10.png)|![Flower 12](docs/example/Individuals/11.png)|
+
 
 ### What?
 BitSprite is a program that creates variants of an image across total sprite sheet of the resultant images.  By taking the index of the variant as it lays on the sprite sheet, Bitsprite uses that index number to activate or deactivate certain designated pixels based on its representation as a binary number. After downloading the package, or the .exe, the user can use the command prompt to run the program, using flags to control the results.  The user has several options to designate colors, as well as 'unfold' the template to create symmetrical images.
@@ -153,7 +154,7 @@ We can combine these into one template and run it through BitSprite.
 
 This results in something a little interesting, but something feels a little off:
 
-![the composite template from the previous image rendered, 256 "flowers"](docs/FlowerUnlimitedOutput)
+![the composite template from the previous image rendered, 256 "flowers"](docs/FlowerUnlimitedOutput.png)
 
 Some are definitely more plant-like than the others, but this is only a single combination of 256^4, and it's rather unlikely if going to want 0th base image, 0th leaves image, 0th stem and 0th flower.  Instead, when using this in a game engine you might pick random numbers for all 4 images and put them together.  So what do we do to the template to return 256 samples?  
 
@@ -260,6 +261,6 @@ This project is inspired by this blog post, which I think is a very inter
 ### Todos
 Beyond further futzing with colors and how to define them, I think I've cleared the low hanging fruit.  That being said, please feel free to add issues or pull requests,I would love to get input on how to make even more interesting generative art or less cluttered Go code. 
 
-| | | | | | | | | | |
-|----|----|----|----|----|----|----|----|----|----|
-|![Flower 247](docs/Example/Individuals/246.png)|![Flower 248](docs/Example/Individuals/247.png)|![Flower 249](docs/Example/Individuals/248.png)|![Flower 250](docs/Example/Individuals/249.png)|![Flower 251](docs/Example/Individuals/250.png)|![Flower 252](docs/Example/Individuals/251.png)|![Flower 253](docs/Example/Individuals/252.png)|![Flower 254](docs/Example/Individuals/253.png)|![Flower 255](docs/Example/Individuals/254.png)|![Flower 256](docs/Example/Individuals/255.png)| 
+| | | | | | | | | | | | |
+|----|----|----|----|----|----|----|----|----|----|----|----|
+|![Flower 245](docs/example/Individuals/244.png)|![Flower 246](docs/example/Individuals/245.png)|![Flower 247](docs/example/Individuals/246.png)|![Flower 248](docs/example/Individuals/247.png)|![Flower 249](docs/example/Individuals/248.png)|![Flower 250](docs/example/Individuals/249.png)|![Flower 251](docs/example/Individuals/250.png)|![Flower 252](docs/example/Individuals/251.png)|![Flower 253](docs/example/Individuals/252.png)|![Flower 254](docs/example/Individuals/253.png)|![Flower 255](docs/example/Individuals/254.png)|![Flower 256](docs/example/Individuals/255.png)| 
