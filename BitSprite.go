@@ -199,10 +199,10 @@ func main() {
 	var foldX int
 	if strings.EqualFold(folding, "even") || strings.EqualFold(folding, "e") {
 		canvasWidth = (templateConfig.Width * 2)
-		foldY = (canvasWidth / 2)
+		foldY = templateConfig.Width
 	} else if strings.EqualFold(folding, "odd") || strings.EqualFold(folding, "o") {
 		canvasWidth = ((templateConfig.Width * 2) - 1)
-		foldY = ((canvasWidth / 2) + 1)
+		foldY = (canvasWidth / 2) + 1
 	} else {
 		canvasWidth = templateConfig.Width
 		foldY = canvasWidth
@@ -210,7 +210,7 @@ func main() {
 
 	if strings.EqualFold(vertFold, "even") || strings.EqualFold(vertFold, "e") {
 		canvasHeight = templateConfig.Height * 2
-		foldX = (canvasHeight / 2)
+		foldX = templateConfig.Height
 	} else if strings.EqualFold(vertFold, "odd") || strings.EqualFold(vertFold, "o") {
 		canvasHeight = (templateConfig.Height * 2) - 1
 		foldX = (canvasHeight / 2) + 1
@@ -268,6 +268,11 @@ func main() {
 			resolutionNumber := i
 			delimitersRead := 0
 			for j := 0; j < len(templateArray); j++ {
+				if returnIndex(delimiters, j) != -1 {
+					delimitersRead = returnIndex(delimiters, j)
+					bitsRead = 0
+					resolutionNumber = randomArrays[delimitersRead][i]
+				}
 				if templateArray[j] == Bit {
 					//We take our increment, shift it by the bitsRead, finally checking whether it is even or odd.  This way 0 = all inactive,
 					//255 = all active.
@@ -280,13 +285,7 @@ func main() {
 				} else {
 					newImage = append(newImage, templateArray[j])
 				}
-				if delimitersRead < len(delimiters) {
-					if j >= delimiters[delimitersRead] {
-						bitsRead = 0
-						resolutionNumber = randomArrays[delimitersRead][i]
-						delimitersRead++
-					}
-				}
+
 			}
 			//checks neighbors of active, colored pixels.  If the neighboring pixel is a background, replace it with an outline
 			//pixel.  Disabled by -outline=false
@@ -313,6 +312,7 @@ func main() {
 					}
 				}
 			}
+			//TODO: Reduce Option. Here we would run through the image again to reduce
 			var outfile *os.File
 			var canvas *image.RGBA
 			if individuals {
@@ -325,11 +325,17 @@ func main() {
 
 			//let's grab the base color for our image
 			var finalColors [PixelsDefined][]color.Color
-			for j := 0; j < len(delimiters)+1; j++ {
-				if j == 0 {
+			var placeholderIndex int
+			if len(delimiters) > 0 {
+				placeholderIndex = len(delimiters)
+			} else {
+				placeholderIndex = 1
+			}
+			for j := 0; j < placeholderIndex; j++ {
+				if len(delimiters) == 0 {
 					resolutionNumber = i
 				} else {
-					resolutionNumber = randomArrays[j-1][i]
+					resolutionNumber = randomArrays[j][i]
 				}
 				if !legacy {
 					for key, val := range chosenColors {
@@ -351,7 +357,6 @@ func main() {
 
 			//Finally, with colors and a template secured, we can write to our individual canvas and collective composite.
 			var pixelIndex int
-			delimitersRead = 0
 			for y := 0; y < canvasHeight; y++ {
 				for x := 0; x < canvasWidth; x++ {
 					//We want to start by converting our coordinate into an index position.  When we fold,
@@ -369,21 +374,33 @@ func main() {
 							pixelIndex = (canvasWidth - x) + ((canvasHeight - y - 1) * templateConfig.Width) - 1
 						}
 					}
+
+					if y < foldX {
+						if returnIndex(delimiters, pixelIndex) != -1 {
+							delimitersRead = returnIndex(delimiters, pixelIndex)
+						}
+					} else {
+						//when we flip, we need to consider that we're reading upside down, so adjust
+						// our pixel index down
+						modifiedPixelIndex := x + ((canvasHeight - y) * templateConfig.Width)
+						if returnIndex(delimiters, modifiedPixelIndex) != -1 {
+							delimitersRead = returnIndex(delimiters, modifiedPixelIndex) - 1
+						} //Hacky hack for reading that last delimiter
+						if delimitersRead == -1 {
+							delimitersRead = 0
+						}
+					}
+
 					//A little messy, but we account for upScale here.
 					for j := 0; j < upScale; j++ {
 						for k := 0; k < upScale; k++ {
 							if individuals {
-								canvas.Set((x*upScale)+j, (y*upScale)+k, finalColors[newImage[pixelIndex]][delimitersRead])
+								canvas.Set((x*upScale)+j, (y*upScale)+k,
+									finalColors[newImage[pixelIndex]][delimitersRead])
 							}
 							composite.Set((x*upScale)+j+canvasWidth*upScale*(i%compositeWidth),
 								(y*upScale)+k+canvasHeight*upScale*(i/compositeWidth),
 								finalColors[newImage[pixelIndex]][delimitersRead])
-						}
-					}
-					//delimiter check
-					if delimitersRead < len(delimiters)-1 {
-						if pixelIndex >= delimiters[delimitersRead] {
-							delimitersRead++
 						}
 					}
 				}
@@ -422,4 +439,16 @@ func mayCreateFolder(path string) {
 		//Shadow realm
 		log.Fatal(err)
 	}
+}
+
+// return index of matched value, otherwise return -1
+func returnIndex(list []int, find int) int {
+	i := 0
+	for i < len(list) {
+		if find == list[i] {
+			return i
+		}
+		i++
+	}
+	return -1
 }

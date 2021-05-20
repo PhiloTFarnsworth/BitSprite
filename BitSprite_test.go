@@ -194,11 +194,19 @@ func TestDelimitedComposite(t *testing.T) {
 	Compare(t, gotFileName, wantFileName, testArgs)
 }
 
+func TestDelimitedCompositeVertFold(t *testing.T) {
+	fmt.Printf("TestDelimitedCompositeVert\n")
+	gotFileName := "/GenerationDirectory/Flower/FlowerSpriteSheet.png"
+	wantFileName := "/testResources/DelimitedFlowerVert.png"
+	testArgs := []string{"cmd", "-template=flowerDelimited", "-fold=e", "-vertfold=e", "-legacy=t", "-outname=Flower", "-randseed=f"}
+	Compare(t, gotFileName, wantFileName, testArgs)
+}
+
 func TestFace(t *testing.T) {
 	fmt.Printf("TestFace\n")
 	gotFileName := "/GenerationDirectory/face/faceSpriteSheet.png"
 	wantFileName := "/testResources/faceSS.png"
-	testArgs := []string{"cmd", "-template=face", "-legacy=f", "-color=#ff0000", "-accent=#00ff00", "-fill=#0000ff", "-fold=odd", "-outname=", "randseed=t"}
+	testArgs := []string{"cmd", "-template=face", "-legacy=f", "-color=#ff0000", "-accent=#00ff00", "-fill=#0000ff", "-fold=odd", "-outname=", "-randseed=t", "-vertfold=none"}
 	Compare(t, gotFileName, wantFileName, testArgs)
 }
 
