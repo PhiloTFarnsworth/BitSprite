@@ -1,5 +1,8 @@
 # BitSprite
 ## A Free 8-Bit Sprite Generator.
+
+![BitSprite Logo](BitSpriteCard.png)
+
 ##### Flower Version:
 | | | | | | | | | | | | |
 |----|----|----|----|----|----|----|----|----|----|----|----|
