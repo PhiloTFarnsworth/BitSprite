@@ -10,7 +10,7 @@
 
 
 ### What?
-BitSprite is a program that creates variants of an image across total sprite sheet of the resultant images.  By taking the index of the variant as it lays on the sprite sheet, Bitsprite uses that index number to activate or deactivate certain designated pixels based on its representation as a binary number. After downloading the package, or the .exe, the user can use the command prompt to run the program, using flags to control the results.  The user has several options to designate colors, as well as 'unfold' the template to create symmetrical images.
+BitSprite is a program that creates sprite sheets of 256 images based on a single template image.  By taking the index of the variant as it lays on the sprite sheet, Bitsprite uses that index number to activate or deactivate certain designated pixels based on its representation as a binary number. After downloading the package, or the .exe, the user can use the command prompt to run the program, using flags to control the results.  The user has several options to designate colors, as well as 'unfold' the template to create symmetrical images.
 
 
 ### Install
