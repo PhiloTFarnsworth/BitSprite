@@ -257,7 +257,7 @@ This is usually a problem with passing bad color values to any of the color flag
 This problem usually indicates that you are not using the correct colors in the template file.  Ensure that they are as indicated in the pixel legend at the beginning of the readme.    
 
 ### Further Reading
-http://web.archive.org/web/20080228054405/http://www.davebollinger.com/works/pixelrobots/
+[Pixel Robots](http://web.archive.org/web/20080228054405/http://www.davebollinger.com/works/pixelrobots/) by Dave Bollinger
 
 This project is inspired by this blog post, which I think is a very interesting dive into generated art and some nifty things you can do with it.
 
